@@ -1,0 +1,524 @@
+openapi: 3.0.3
+info:
+  title: Todo Evolution Authentication API
+  description: Authentication endpoints for Better Auth integration with FastAPI backend
+  version: 1.0.0
+  contact:
+    name: Todo Evolution Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://your-api-domain.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Users
+    description: User profile management
+
+paths:
+  # Authentication Endpoints (Better Auth Compatible)
+  /auth/signup:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Create a new user account with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserSignUpRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/signin:
+    post:
+      tags:
+        - Authentication
+      summary: Authenticate user
+      description: Sign in with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserSignInRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/signout:
+    post:
+      tags:
+        - Authentication
+      summary: Sign out user
+      description: End the current user session
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sign out successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/session:
+    get:
+      tags:
+        - Authentication
+      summary: Get current session
+      description: Retrieve current user session information
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Session information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh authentication token
+      description: Generate new JWT token for current session
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # User Management Endpoints
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Get current user profile
+      description: Retrieve the profile of the authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Users
+      summary: Update user profile
+      description: Update the profile of the authenticated user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: User profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/{user_id}:
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      description: Retrieve user information by ID (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: User information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Access denied (admin only)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+# Component Schemas
+components:
+  schemas:
+    # Base Schemas
+    BaseResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Operation completed successfully"
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              example: "Invalid input data"
+            details:
+              type: array
+              items:
+                type: string
+              example: ["Email is required", "Password too short"]
+
+    SuccessResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              example: {}
+
+    # User Schemas
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 12345
+          readOnly: true
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: "John Doe"
+        emailVerified:
+          type: boolean
+          example: true
+          readOnly: true
+        role:
+          type: string
+          enum: [user, admin]
+          example: "user"
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-12-07T10:30:00Z"
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-12-07T10:30:00Z"
+          readOnly: true
+
+    UserResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/User'
+
+    UserSignUpRequest:
+      type: object
+      required:
+        - email
+        - name
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "newuser@example.com"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: "Jane Smith"
+        password:
+          type: string
+          minLength: 8
+          maxLength: 100
+          example: "securePassword123!"
+          description: "Must be at least 8 characters long"
+
+    UserSignInRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        password:
+          type: string
+          minLength: 1
+          example: "userPassword123!"
+
+    UserUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: "Updated Name"
+        email:
+          type: string
+          format: email
+          example: "updated@example.com"
+        image:
+          type: string
+          format: uri
+          example: "https://example.com/profile.jpg"
+          description: "Profile image URL (optional)"
+
+    # Authentication Schemas
+    AuthResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                user:
+                  $ref: '#/components/schemas/User'
+                session:
+                  $ref: '#/components/schemas/Session'
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "sess_1234567890"
+          readOnly: true
+        userId:
+          type: integer
+          format: int64
+          example: 12345
+          readOnly: true
+        expiresAt:
+          type: string
+          format: date-time
+          example: "2025-12-14T10:30:00Z"
+          readOnly: true
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          readOnly: true
+          description: "JWT access token"
+
+    SessionResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                user:
+                  $ref: '#/components/schemas/User'
+                session:
+                  $ref: '#/components/schemas/Session'
+                isAuthenticated:
+                  type: boolean
+                  example: true
+
+    TokenResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                token:
+                  type: string
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                expiresAt:
+                  type: string
+                  format: date-time
+                  example: "2025-12-14T10:30:00Z"
+
+  # Security Schemes
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT token obtained from authentication"
+
+  # Parameters
+  parameters:
+    UserId:
+      name: user_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+      description: "User ID"
+
+# Example Responses for Documentation
+examples:
+  AuthenticationSuccess:
+    summary: Successful authentication
+    value:
+      success: true
+      message: "Authentication successful"
+      data:
+        user:
+          id: 12345
+          email: "user@example.com"
+          name: "John Doe"
+          emailVerified: true
+          role: "user"
+          createdAt: "2025-12-07T10:30:00Z"
+          updatedAt: "2025-12-07T10:30:00Z"
+        session:
+          id: "sess_1234567890"
+          userId: 12345
+          expiresAt: "2025-12-14T10:30:00Z"
+          token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+  ValidationError:
+    summary: Validation error response
+    value:
+      success: false
+      error:
+        code: "VALIDATION_ERROR"
+        message: "Invalid input data"
+        details: ["Email is required", "Password must be at least 8 characters"]
+
+  AuthenticationError:
+    summary: Authentication error
+    value:
+      success: false
+      error:
+        code: "INVALID_CREDENTIALS"
+        message: "Invalid email or password"
+        details: []

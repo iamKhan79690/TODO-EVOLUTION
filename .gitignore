@@ -10,7 +10,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -31,6 +30,8 @@ htmlcov/
 uv.lock
 
 # Virtual Environment
+.env
+.env.example
 venv/
 env/
 ENV/
@@ -45,6 +46,34 @@ env.bak/
 *.swo
 *~
 
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+dist/
+build/
+.next/
+out/
+.cache/
+.parcel-cache/
+
+# Environment variables
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# TypeScript
+*.tsbuildinfo
+
 # OS
 .DS_Store
 Thumbs.db
+
+# Frontend specific
+.eslintcache
+.vercel
