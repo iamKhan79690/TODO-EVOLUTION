@@ -1,0 +1,34 @@
+{
+  "name": "todo-evolution-phase2",
+  "version": "1.0.0",
+  "description": "Phase II full-stack web application for Todo Evolution project",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && source venv/bin/activate && uvicorn main:app --reload",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "build:frontend": "cd frontend && npm run build",
+    "install:all": "cd frontend && npm install",
+    "setup": "npm run install:all && cd backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt",
+    "test": "cd frontend && npm test && cd ../backend && pytest"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "python": ">=3.11.0"
+  },
+  "keywords": [
+    "todo",
+    "full-stack",
+    "nextjs",
+    "fastapi",
+    "typescript"
+  ],
+  "author": "Todo Evolution Team",
+  "license": "MIT"
+}

@@ -1,4 +1,4 @@
-# Claude Code Rules
+﻿# Claude Code Rules
 
 This file is generated during init for the selected agent.
 
@@ -208,3 +208,141 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 
 ## Code Standards
 See `.specify/memory/constitution.md` for code quality, testing, performance, security, and architecture principles.
+- # 📋 Phase 5: Integration & Testing
+
+### Agent to Use
+```
+@Testing-Coordinator
+```
+
+### Step-by-Step Instructions
+
+**Step 5.1: Run Authentication Tests**
+```
+@Testing-Coordinator: Execute authentication test suite
+```
+Tests:
+- AUTH-001: Sign up with valid credentials
+- AUTH-002: Sign up with invalid email
+- AUTH-003: Sign in with valid credentials
+- AUTH-004: Sign in with wrong password
+- AUTH-005: Sign out
+- AUTH-006: Access protected route without auth
+
+**Step 5.2: Run CRUD Tests**
+```
+@Testing-Coordinator: Execute CRUD test suite
+```
+Tests:
+- CRUD-001: Create task
+- CRUD-002: Create task with empty title
+- CRUD-003: Read tasks list
+- CRUD-004: Update task title
+- CRUD-005: Delete task
+- CRUD-006: Mark task complete
+- CRUD-007: Mark task incomplete
+
+**Step 5.3: Run Security Tests**
+```
+@Testing-Coordinator: Execute security test suite
+```
+Tests:
+- SEC-001: Access another user's tasks via URL
+- SEC-002: Create task for another user
+- SEC-003: Access API without JWT
+- SEC-004: Access API with invalid JWT
+
+**Step 5.4: Run UI/UX Tests**
+```
+@Testing-Coordinator: Execute UI/UX test suite
+```
+Tests:
+- UI-001: Responsive design - Mobile
+- UI-002: Loading states
+- UI-003: Error message display
+- UI-004: Empty state
+- UI-005: Browser compatibility (Chrome, Firefox, Safari)
+
+**Step 5.5: Fix Issues**
+```
+@Testing-Coordinator: Document and prioritize issues found
+```
+Then use appropriate agent to fix:
+- Frontend issues → @Frontend-Specialist
+- Backend issues → @Backend-Architect
+- Auth issues → @BetterAuth-Engineer
+
+### Output
+- Test results document
+- List of issues to fix
+
+---
+- # 📋 Phase 5: Integration & Testing
+
+### Agent to Use
+```
+@Testing-Coordinator
+```
+
+### Step-by-Step Instructions
+
+**Step 5.1: Run Authentication Tests**
+```
+@Testing-Coordinator: Execute authentication test suite
+```
+Tests:
+- AUTH-001: Sign up with valid credentials
+- AUTH-002: Sign up with invalid email
+- AUTH-003: Sign in with valid credentials
+- AUTH-004: Sign in with wrong password
+- AUTH-005: Sign out
+- AUTH-006: Access protected route without auth
+
+**Step 5.2: Run CRUD Tests**
+```
+@Testing-Coordinator: Execute CRUD test suite
+```
+Tests:
+- CRUD-001: Create task
+- CRUD-002: Create task with empty title
+- CRUD-003: Read tasks list
+- CRUD-004: Update task title
+- CRUD-005: Delete task
+- CRUD-006: Mark task complete
+- CRUD-007: Mark task incomplete
+
+**Step 5.3: Run Security Tests**
+```
+@Testing-Coordinator: Execute security test suite
+```
+Tests:
+- SEC-001: Access another user's tasks via URL
+- SEC-002: Create task for another user
+- SEC-003: Access API without JWT
+- SEC-004: Access API with invalid JWT
+
+**Step 5.4: Run UI/UX Tests**
+```
+@Testing-Coordinator: Execute UI/UX test suite
+```
+Tests:
+- UI-001: Responsive design - Mobile
+- UI-002: Loading states
+- UI-003: Error message display
+- UI-004: Empty state
+- UI-005: Browser compatibility (Chrome, Firefox, Safari)
+
+**Step 5.5: Fix Issues**
+```
+@Testing-Coordinator: Document and prioritize issues found
+```
+Then use appropriate agent to fix:
+- Frontend issues → @Frontend-Specialist
+- Backend issues → @Backend-Architect
+- Auth issues → @BetterAuth-Engineer
+
+### Output
+- Test results document
+- List of issues to fix
+
+---

@@ -1,0 +1,593 @@
+openapi: 3.0.3
+info:
+  title: Todo Evolution Backend API
+  description: RESTful API for task management with user authentication and CRUD operations
+  version: 1.0.0
+  contact:
+    name: Todo Evolution Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.todo-evolution.com
+    description: Production server
+
+paths:
+  /api/health:
+    get:
+      tags:
+        - Health
+      summary: API health check
+      description: Check API health status and database connectivity
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: API is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/{user_id}/tasks:
+    get:
+      tags:
+        - Tasks
+      summary: List user's tasks
+      description: Retrieve all tasks for the authenticated user with optional filtering
+      operationId: listTasks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID (must match JWT token)
+        - name: completed
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filter by completion status
+        - name: priority
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/Priority'
+          description: Filter by priority level
+        - name: skip
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          description: Number of items to skip (pagination)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+          description: Maximum number of items to return
+      responses:
+        '200':
+          description: List of user's tasks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - Tasks
+      summary: Create new task
+      description: Create a new task for the authenticated user
+      operationId: createTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID (must match JWT token)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/{user_id}/tasks/{task_id}:
+    get:
+      tags:
+        - Tasks
+      summary: Get specific task
+      description: Retrieve a specific task by ID for the authenticated user
+      operationId: getTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID (must match JWT token)
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Task ID
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags:
+        - Tasks
+      summary: Update task
+      description: Update all fields of an existing task
+      operationId: updateTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID (must match JWT token)
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Task ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Tasks
+      summary: Delete task
+      description: Soft delete (archive) a task for the authenticated user
+      operationId: deleteTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID (must match JWT token)
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Task ID
+      responses:
+        '200':
+          description: Task deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/{user_id}/tasks/{task_id}/complete:
+    patch:
+      tags:
+        - Tasks
+      summary: Toggle task completion
+      description: Toggle the completion status of a task
+      operationId: toggleTaskComplete
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID (must match JWT token)
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Task ID
+      responses:
+        '200':
+          description: Task completion status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    Priority:
+      type: string
+      enum:
+        - low
+        - medium
+        - high
+        - urgent
+      description: Task priority levels
+
+    RecurrencePattern:
+      type: string
+      enum:
+        - none
+        - daily
+        - weekly
+        - monthly
+        - yearly
+      description: Task recurrence patterns
+
+    TaskCreate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Task title
+          example: "Complete project documentation"
+        description:
+          type: string
+          maxLength: 1000
+          description: Optional task description
+          example: "Write comprehensive documentation for the API endpoints"
+        priority:
+          $ref: '#/components/schemas/Priority'
+          description: Task priority level
+          default: medium
+        due_date:
+          type: string
+          format: date-time
+          description: Optional due date (must be in the future)
+          example: "2025-12-15T23:59:59Z"
+        recurrence_pattern:
+          $ref: '#/components/schemas/RecurrencePattern'
+          description: Task recurrence pattern
+          default: none
+      example:
+        title: "Complete project documentation"
+        description: "Write comprehensive documentation for the API endpoints"
+        priority: "high"
+        due_date: "2025-12-15T23:59:59Z"
+        recurrence_pattern: "none"
+
+    TaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Updated task title
+        description:
+          type: string
+          maxLength: 1000
+          description: Updated task description
+        priority:
+          $ref: '#/components/schemas/Priority'
+          description: Updated task priority
+        due_date:
+          type: string
+          format: date-time
+          description: Updated due date (must be in the future)
+        recurrence_pattern:
+          $ref: '#/components/schemas/RecurrencePattern'
+          description: Updated recurrence pattern
+        is_completed:
+          type: boolean
+          description: Updated completion status
+      example:
+        title: "Updated task title"
+        priority: "medium"
+        is_completed: true
+
+    TaskResponse:
+      type: object
+      required:
+        - id
+        - title
+        - priority
+        - is_completed
+        - created_at
+        - updated_at
+        - user_id
+      properties:
+        id:
+          type: integer
+          description: Task ID
+          example: 123
+        title:
+          type: string
+          description: Task title
+          example: "Complete project documentation"
+        description:
+          type: string
+          description: Task description
+          example: "Write comprehensive documentation for the API endpoints"
+        priority:
+          $ref: '#/components/schemas/Priority'
+          description: Task priority level
+          example: "high"
+        due_date:
+          type: string
+          format: date-time
+          description: Task due date
+          example: "2025-12-15T23:59:59Z"
+        recurrence_pattern:
+          $ref: '#/components/schemas/RecurrencePattern'
+          description: Task recurrence pattern
+          example: "none"
+        is_completed:
+          type: boolean
+          description: Task completion status
+          example: false
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2025-12-07T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2025-12-07T15:45:00Z"
+        user_id:
+          type: integer
+          description: Owner user ID
+          example: 456
+
+    TaskListResponse:
+      type: object
+      required:
+        - tasks
+        - count
+        - user_id
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskResponse'
+          description: List of tasks
+        count:
+          type: integer
+          description: Number of tasks returned
+          example: 42
+        user_id:
+          type: integer
+          description: User ID for whom tasks were retrieved
+          example: 456
+        pagination:
+          type: object
+          properties:
+            skip:
+              type: integer
+              description: Number of items skipped
+              example: 0
+            limit:
+              type: integer
+              description: Maximum items returned
+              example: 100
+            has_more:
+              type: boolean
+              description: Whether more items are available
+              example: true
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - version
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          description: API health status
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+          description: Health check timestamp
+          example: "2025-12-07T10:30:00Z"
+        version:
+          type: string
+          description: API version
+          example: "1.0.0"
+        database:
+          type: string
+          description: Database connectivity status
+          example: "connected"
+
+    DeleteResponse:
+      type: object
+      required:
+        - message
+        - task_id
+      properties:
+        message:
+          type: string
+          description: Success message
+          example: "Task deleted successfully"
+        task_id:
+          type: integer
+          description: ID of the deleted task
+          example: 123
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - timestamp
+        - path
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              description: Human-readable error message
+              example: "Title is required and must be between 1-200 characters"
+            details:
+              type: object
+              description: Additional error details
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+          example: "2025-12-07T10:30:00Z"
+        path:
+          type: string
+          description: Request path
+          example: "/api/456/tasks"
+
+  responses:
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized - missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Forbidden - user does not have access to this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from Better Auth authentication
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Tasks
+    description: Task management endpoints
