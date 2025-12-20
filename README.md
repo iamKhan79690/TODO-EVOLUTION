@@ -213,8 +213,8 @@ GEMINI_API_KEY=your-gemini-api-key
 # CORS (adjust for your frontend URL)
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 
-# MCP Server (Optional - disabled by default)
-USE_MCP_TOOLS=false
+# MCP Server (Required for AI Chat)
+USE_MCP_TOOLS=true
 MCP_SERVER_URL=http://localhost:8001
 
 # Redis (Optional - for token blacklisting)
@@ -237,7 +237,7 @@ NEXT_PUBLIC_WS_URL=ws://localhost:8000
 
 #### Option 1: Run Separately (Recommended for Development)
 
-Open **two terminal windows**:
+Open **three terminal windows**:
 
 **Terminal 1 - Backend:**
 ```bash
@@ -247,7 +247,14 @@ venv\Scripts\activate      # Windows
 python main.py
 ```
 
-**Terminal 2 - Frontend:**
+**Terminal 2 - MCP Server:**
+```bash
+cd mcp_server
+pip install -r requirements.txt  # First time only
+python server.py
+```
+
+**Terminal 3 - Frontend:**
 ```bash
 cd frontend
 npm run dev
@@ -273,6 +280,7 @@ Once running, access the application at:
 |---------|-----|-------------|
 | 🎨 **Frontend** | http://localhost:3000 | Main web application |
 | 🔧 **Backend API** | http://localhost:8000 | FastAPI REST API |
+| 🤖 **MCP Server** | http://localhost:8001 | AI Tools Server |
 | 📚 **API Docs** | http://localhost:8000/docs | Interactive Swagger UI |
 | 📕 **ReDoc** | http://localhost:8000/redoc | Alternative API docs |
 | 💚 **Health Check** | http://localhost:8000/api/v1/health | API health status |
@@ -306,15 +314,16 @@ Once running, access the application at:
 
 ---
 
-## 🔌 MCP Server (Optional)
+## 🔌 MCP Server (Required)
 
-The **MCP (Model Context Protocol) Server** provides extended AI capabilities through additional tools. It runs as a **separate service** and is **NOT required** for basic functionality.
+The **MCP (Model Context Protocol) Server** provides AI capabilities for the chat assistant through task management tools. It runs as a **separate service** on port 8001 and is **required** for the AI chat functionality to work properly.
 
-### When to Use MCP Server
+### What MCP Server Provides
 
-- You want enhanced AI tool capabilities
-- You need a separate microservice architecture for AI tools
-- You're integrating with other MCP-compatible clients
+- AI-powered task management tools (add, list, complete, delete, update tasks)
+- JWT authentication integration with the backend
+- Structured logging and performance monitoring
+- FastAPI client for seamless backend communication
 
 ### Running MCP Server
 
@@ -343,13 +352,7 @@ python main.py
 python server.py
 ```
 
-**4. Enable in backend:**
-
-Set in `backend/.env`:
-```bash
-USE_MCP_TOOLS=true
-MCP_SERVER_URL=http://localhost:8001
-```
+> **Note**: The MCP server communicates with the backend API on port 8000, so ensure the backend is running before starting the MCP server.
 
 ### MCP Server Endpoints
 
