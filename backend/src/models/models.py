@@ -4,8 +4,12 @@ SQLModel definitions for the Todo Evolution application.
 
 from enum import Enum
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
+
+# Forward reference for Conversation from chat.py
+if TYPE_CHECKING:
+    from .chat import Conversation
 
 
 class Priority(str, Enum):
@@ -25,6 +29,14 @@ class RecurrencePattern(str, Enum):
     YEARLY = "yearly"
 
 
+class TaskStatus(str, Enum):
+    """Task status levels."""
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
 class User(SQLModel, table=True):
     """User model managed by Better Auth."""
 
@@ -36,7 +48,8 @@ class User(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
-    tasks: list["Task"] = Relationship(back_populates="user")
+    tasks: List["Task"] = Relationship(back_populates="user")
+    conversations: List["Conversation"] = Relationship(back_populates="user")
 
 
 class TaskBase(SQLModel):
@@ -53,6 +66,7 @@ class Task(TaskBase, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     is_completed: bool = Field(default=False)
+    completed_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     user_id: int = Field(foreign_key="user.id")

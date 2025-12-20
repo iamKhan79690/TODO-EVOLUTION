@@ -1,0 +1,292 @@
+{
+  "mcp_server_specification": {
+    "name": "Task Management MCP Server",
+    "version": "1.0.0",
+    "description": "MCP server exposing 5 task management tools for Phase III AI Chatbot integration",
+    "transport": "stdio",
+    "tools": [
+      {
+        "name": "add_task",
+        "description": "Create a new task for the authenticated user. Supports optional description, priority level, and due date. Returns the created task with assigned ID and timestamps.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "description": "Task title (required, 1-200 characters)"
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 1000,
+              "description": "Optional task description (max 1000 characters)"
+            },
+            "priority": {
+              "type": "string",
+              "enum": ["low", "medium", "high", "urgent"],
+              "default": "medium",
+              "description": "Task priority level"
+            },
+            "due_date": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Optional due date in ISO 8601 format (e.g., 2025-01-12T10:30:00Z)"
+            },
+            "jwt_token": {
+              "type": "string",
+              "description": "JWT authentication token from Phase III AI Chatbot"
+            }
+          },
+          "required": ["title", "jwt_token"]
+        }
+      },
+      {
+        "name": "list_tasks",
+        "description": "List tasks for the authenticated user with optional filtering and pagination. Returns tasks in reverse chronological order (newest first). Supports filtering by completion status and priority level.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["completed", "pending", "all"],
+              "default": "pending",
+              "description": "Filter tasks by completion status"
+            },
+            "priority": {
+              "type": "string",
+              "enum": ["low", "medium", "high", "urgent"],
+              "description": "Filter tasks by priority level"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "description": "Maximum number of tasks to return (1-100)"
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "description": "Number of tasks to skip for pagination"
+            },
+            "jwt_token": {
+              "type": "string",
+              "description": "JWT authentication token from Phase III AI Chatbot"
+            }
+          },
+          "required": ["jwt_token"]
+        }
+      },
+      {
+        "name": "complete_task",
+        "description": "Mark a task as completed. Validates task ownership and updates completion timestamp. Cannot be called on already completed tasks.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "task_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "ID of the task to mark as completed"
+            },
+            "jwt_token": {
+              "type": "string",
+              "description": "JWT authentication token from Phase III AI Chatbot"
+            }
+          },
+          "required": ["task_id", "jwt_token"]
+        }
+      },
+      {
+        "name": "delete_task",
+        "description": "Delete a task using soft delete (marks as deleted rather than permanent removal). Validates task ownership before deletion. Task remains in database but is marked as deleted.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "task_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "ID of the task to delete"
+            },
+            "jwt_token": {
+              "type": "string",
+              "description": "JWT authentication token from Phase III AI Chatbot"
+            }
+          },
+          "required": ["task_id", "jwt_token"]
+        }
+      },
+      {
+        "name": "update_task",
+        "description": "Update an existing task with partial updates. Only provided fields are updated. Validates task ownership and input constraints. Returns updated task with new timestamps.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "task_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "ID of the task to update"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "description": "Updated task title (1-200 characters)"
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 1000,
+              "description": "Updated task description (max 1000 characters)"
+            },
+            "priority": {
+              "type": "string",
+              "enum": ["low", "medium", "high", "urgent"],
+              "description": "Updated priority level"
+            },
+            "due_date": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Updated due date in ISO 8601 format"
+            },
+            "jwt_token": {
+              "type": "string",
+              "description": "JWT authentication token from Phase III AI Chatbot"
+            }
+          },
+          "required": ["task_id", "jwt_token"]
+        }
+      }
+    ]
+  },
+  "response_schemas": {
+    "success_response": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "example": true
+        },
+        "data": {
+          "description": "Tool-specific response data"
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable success message",
+          "example": "Task created successfully"
+        },
+        "correlation_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier for request tracing"
+        },
+        "execution_time_ms": {
+          "type": "number",
+          "description": "Tool execution time in milliseconds"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Response timestamp in ISO 8601 format"
+        }
+      },
+      "required": ["success", "timestamp"]
+    },
+    "error_response": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "example": false
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "description": "Machine-readable error code",
+              "examples": ["VALIDATION_ERROR", "AUTHENTICATION_ERROR", "TASK_NOT_FOUND", "DATABASE_ERROR"]
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable error message",
+              "example": "Invalid input parameters"
+            },
+            "details": {
+              "type": "object",
+              "description": "Additional error details for debugging"
+            }
+          },
+          "required": ["code", "message"]
+        },
+        "correlation_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier for request tracing"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Response timestamp in ISO 8601 format"
+        }
+      },
+      "required": ["success", "error", "timestamp"]
+    }
+  },
+  "task_object_schema": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "description": "Unique task identifier",
+        "example": 123
+      },
+      "title": {
+        "type": "string",
+        "description": "Task title",
+        "example": "Complete project documentation"
+      },
+      "description": {
+        "type": "string",
+        "description": "Task description",
+        "example": "Write comprehensive documentation for the MCP server implementation"
+      },
+      "priority": {
+        "type": "string",
+        "enum": ["low", "medium", "high", "urgent"],
+        "description": "Task priority level",
+        "example": "medium"
+      },
+      "is_completed": {
+        "type": "boolean",
+        "description": "Task completion status",
+        "example": false
+      },
+      "due_date": {
+        "type": "string",
+        "format": "date-time",
+        "description": "Task due date in ISO 8601 format",
+        "example": "2025-01-15T17:00:00Z",
+        "nullable": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "description": "Task creation timestamp",
+        "example": "2025-01-12T10:30:00Z"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "description": "Last update timestamp",
+        "example": "2025-01-12T11:45:00Z"
+      },
+      "user_id": {
+        "type": "integer",
+        "description": "Owner user ID",
+        "example": 42
+      }
+    },
+    "required": ["id", "title", "priority", "is_completed", "created_at", "updated_at", "user_id"]
+  }
+}

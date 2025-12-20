@@ -1,0 +1,365 @@
+openapi: 3.0.3
+info:
+  title: Chat API
+  description: AI-powered task management agent chat interface
+  version: 1.0.0
+  contact:
+    name: TODO Evolution Team
+    email: support@todo-evolution.com
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.todo-evolution.com
+    description: Production server
+
+paths:
+  /api/{user_id}/chat:
+    post:
+      tags:
+        - Chat
+      summary: Send chat message to AI agent
+      description: |
+        Send a message to the AI task management agent and receive a response.
+        The endpoint supports conversation continuity by including a conversation_id.
+        Messages are processed with the conversation history for context.
+      operationId: sendChatMessage
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User identifier (must match JWT token)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            examples:
+              newConversation:
+                summary: Start new conversation
+                value:
+                  user_id: "550e8400-e29b-41d4-a716-446655440000"
+                  message: "Create a task to review the project proposal by Friday at 2 PM"
+                  jwt_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              existingConversation:
+                summary: Continue existing conversation
+                value:
+                  user_id: "550e8400-e29b-41d4-a716-446655440000"
+                  conversation_id: "conv_1234567890abcdef"
+                  message: "What was the deadline for that project review task?"
+                  jwt_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        '200':
+          description: Message processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+              examples:
+                successful:
+                  summary: Successful response with tool execution
+                  value:
+                    conversation_id: "conv_1234567890abcdef"
+                    response: "I've created a task to review the project proposal with a deadline of Friday at 2 PM. The task has been set with high priority."
+                    tool_calls:
+                      - tool_name: "add_task"
+                        parameters:
+                          title: "Review project proposal"
+                          description: "Review and analyze the project proposal document"
+                          due_date: "2025-01-17"
+                          due_time: "14:00"
+                          priority: "high"
+                        execution_time_ms: 245.3
+                        status: "success"
+                    message: "Message processed successfully"
+                    correlation_id: "req_1234567890abcdef"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    ChatRequest:
+      type: object
+      required:
+        - user_id
+        - message
+        - jwt_token
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: User identifier (must match JWT token)
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        message:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Chat message content (1-2000 characters)
+          example: "Create a task to review the project proposal by Friday at 2 PM"
+        conversation_id:
+          type: string
+          format: uuid
+          description: Optional conversation identifier for continuing existing conversations
+          example: "conv_1234567890abcdef"
+          nullable: true
+        jwt_token:
+          type: string
+          description: JWT authentication token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+      example:
+        user_id: "550e8400-e29b-41d4-a716-446655440000"
+        message: "Create a task to review the project proposal by Friday at 2 PM"
+        jwt_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    ChatResponse:
+      type: object
+      required:
+        - conversation_id
+        - response
+        - tool_calls
+        - message
+      properties:
+        conversation_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the conversation
+          example: "conv_1234567890abcdef"
+        response:
+          type: string
+          description: AI agent's response to the user message
+          example: "I've created a task to review the project proposal with a deadline of Friday at 2 PM. The task has been set with high priority."
+        tool_calls:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolCall'
+          description: List of tool calls executed by the AI agent
+          example:
+            - tool_name: "add_task"
+              parameters:
+                title: "Review project proposal"
+                description: "Review and analyze the project proposal document"
+                due_date: "2025-01-17"
+                due_time: "14:00"
+                priority: "high"
+              execution_time_ms: 245.3
+              status: "success"
+        message:
+          type: string
+          description: Status message indicating the result of the operation
+          example: "Message processed successfully"
+        correlation_id:
+          type: string
+          format: uuid
+          description: Correlation ID for request tracing
+          example: "req_1234567890abcdef"
+          nullable: true
+
+    ToolCall:
+      type: object
+      required:
+        - tool_name
+        - parameters
+        - status
+      properties:
+        tool_name:
+          type: string
+          description: Name of the tool that was executed
+          example: "add_task"
+        parameters:
+          type: object
+          description: Parameters passed to the tool
+          example:
+            title: "Review project proposal"
+            description: "Review and analyze the project proposal document"
+            due_date: "2025-01-17"
+            due_time: "14:00"
+            priority: "high"
+        execution_time_ms:
+          type: number
+          format: float
+          description: Time taken to execute the tool in milliseconds
+          example: 245.3
+          nullable: true
+        status:
+          type: string
+          enum: ["success", "error", "timeout"]
+          description: Execution status of the tool
+          example: "success"
+        error_message:
+          type: string
+          description: Error message if tool execution failed
+          example: "Failed to create task: Database connection timeout"
+          nullable: true
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - correlation_id
+      properties:
+        error:
+          type: string
+          description: Error code identifier
+          example: "validation_error"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Message cannot be empty"
+        correlation_id:
+          type: string
+          format: uuid
+          description: Correlation ID for request tracing
+          example: "req_1234567890abcdef"
+        details:
+          type: object
+          description: Additional error details
+          example:
+            field: "message"
+            constraint: "min_length=1"
+          nullable: true
+
+    RateLimitError:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+      type: object
+      properties:
+        error:
+          type: string
+          example: "rate_limit_exceeded"
+        message:
+          type: string
+          example: "Rate limit exceeded. Please wait before sending another message."
+        retry_after:
+          type: integer
+          description: Seconds to wait before next request
+          example: 60
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT authentication token
+
+  responses:
+    BadRequest:
+      description: Bad Request - Invalid input data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            emptyMessage:
+              summary: Empty message
+              value:
+                error: "validation_error"
+                message: "Message cannot be empty"
+                correlation_id: "req_1234567890abcdef"
+            messageTooLong:
+              summary: Message too long
+              value:
+                error: "validation_error"
+                message: "Message exceeds maximum length of 2000 characters"
+                correlation_id: "req_1234567890abcdef"
+                details:
+                  field: "message"
+                  constraint: "max_length=2000"
+                  actual_length: "2100"
+
+    Unauthorized:
+      description: Unauthorized - Invalid or missing authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missingToken:
+              summary: Missing JWT token
+              value:
+                error: "authentication_error"
+                message: "Authentication token required"
+                correlation_id: "req_1234567890abcdef"
+            invalidToken:
+              summary: Invalid JWT token
+              value:
+                error: "authentication_error"
+                message: "Invalid or expired JWT token"
+                correlation_id: "req_1234567890abcdef"
+            userMismatch:
+              summary: User ID mismatch
+              value:
+                error: "authorization_error"
+                message: "User ID in token does not match user ID in URL"
+                correlation_id: "req_1234567890abcdef"
+
+    Forbidden:
+      description: Forbidden - User not authorized for this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "authorization_error"
+            message: "Access denied to this conversation"
+            correlation_id: "req_1234567890abcdef"
+
+    TooManyRequests:
+      description: Too Many Requests - Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RateLimitError'
+          example:
+            error: "rate_limit_exceeded"
+            message: "Rate limit exceeded. Please wait 60 seconds before sending another message."
+            retry_after: 60
+            correlation_id: "req_1234567890abcdef"
+
+    InternalServerError:
+      description: Internal Server Error - Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            generalError:
+              summary: General internal error
+              value:
+                error: "internal_error"
+                message: "An unexpected error occurred while processing your request"
+                correlation_id: "req_1234567890abcdef"
+            agentError:
+              summary: AI agent processing error
+              value:
+                error: "agent_error"
+                message: "AI agent is temporarily unavailable. Please try again later."
+                correlation_id: "req_1234567890abcdef"
+
+  parameters:
+    UserId:
+      name: user_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: User identifier (must match JWT token)
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+tags:
+  - name: Chat
+    description: Chat API endpoints for AI agent interaction

@@ -1,0 +1,253 @@
+{
+  "error_codes": {
+    "authentication_errors": {
+      "AUTH_TOKEN_MISSING": {
+        "code": "AUTH_TOKEN_MISSING",
+        "message": "JWT authentication token is required",
+        "http_status": 401,
+        "description": "The request does not include a valid JWT token in the jwt_token parameter",
+        "user_action": "Provide a valid JWT token from Phase III AI Chatbot authentication"
+      },
+      "AUTH_TOKEN_INVALID": {
+        "code": "AUTH_TOKEN_INVALID",
+        "message": "Invalid JWT authentication token",
+        "http_status": 401,
+        "description": "The provided JWT token is malformed, has invalid signature, or cannot be decoded",
+        "user_action": "Verify JWT token format and ensure it's obtained from Phase III AI Chatbot"
+      },
+      "AUTH_TOKEN_EXPIRED": {
+        "code": "AUTH_TOKEN_EXPIRED",
+        "message": "JWT authentication token has expired",
+        "http_status": 401,
+        "description": "The provided JWT token has exceeded its valid time period",
+        "user_action": "Obtain a fresh JWT token from Phase III AI Chatbot"
+      },
+      "AUTH_USER_NOT_FOUND": {
+        "code": "AUTH_USER_NOT_FOUND",
+        "message": "User not found for provided authentication token",
+        "http_status": 401,
+        "description": "The JWT token references a user that does not exist in the database",
+        "user_action": "Ensure user account exists and is active"
+      }
+    },
+    "authorization_errors": {
+      "USER_ISOLATION_VIOLATION": {
+        "code": "USER_ISOLATION_VIOLATION",
+        "message": "Access denied: task does not belong to authenticated user",
+        "http_status": 403,
+        "description": "User attempted to access a task that belongs to another user",
+        "user_action": "Verify task ID belongs to the authenticated user"
+      },
+      "INSUFFICIENT_PERMISSIONS": {
+        "code": "INSUFFICIENT_PERMISSIONS",
+        "message": "Insufficient permissions to perform this operation",
+        "http_status": 403,
+        "description": "User lacks required permissions for the requested operation",
+        "user_action": "Contact administrator if permissions should be granted"
+      }
+    },
+    "validation_errors": {
+      "VALIDATION_ERROR": {
+        "code": "VALIDATION_ERROR",
+        "message": "Input validation failed",
+        "http_status": 400,
+        "description": "One or more input parameters failed validation",
+        "user_action": "Check input parameters against schema requirements"
+      },
+      "TITLE_TOO_SHORT": {
+        "code": "TITLE_TOO_SHORT",
+        "message": "Task title must be at least 1 character long",
+        "http_status": 400,
+        "description": "Provided title is empty or too short",
+        "user_action": "Provide a title with at least 1 character"
+      },
+      "TITLE_TOO_LONG": {
+        "code": "TITLE_TOO_LONG",
+        "message": "Task title must not exceed 200 characters",
+        "http_status": 400,
+        "description": "Provided title exceeds maximum length of 200 characters",
+        "user_action": "Shorten title to 200 characters or less"
+      },
+      "DESCRIPTION_TOO_LONG": {
+        "code": "DESCRIPTION_TOO_LONG",
+        "message": "Task description must not exceed 1000 characters",
+        "http_status": 400,
+        "description": "Provided description exceeds maximum length of 1000 characters",
+        "user_action": "Shorten description to 1000 characters or less"
+      },
+      "INVALID_PRIORITY": {
+        "code": "INVALID_PRIORITY",
+        "message": "Invalid priority level. Must be one of: low, medium, high, urgent",
+        "http_status": 400,
+        "description": "Provided priority is not in the allowed enum values",
+        "user_action": "Use one of: low, medium, high, urgent"
+      },
+      "INVALID_DUE_DATE": {
+        "code": "INVALID_DUE_DATE",
+        "message": "Invalid due date format. Must be ISO 8601 datetime",
+        "http_status": 400,
+        "description": "Provided due date is not in valid ISO 8601 format",
+        "user_action": "Use ISO 8601 format: 2025-01-12T10:30:00Z"
+      },
+      "INVALID_STATUS": {
+        "code": "INVALID_STATUS",
+        "message": "Invalid status filter. Must be one of: completed, pending, all",
+        "http_status": 400,
+        "description": "Provided status filter is not in the allowed values",
+        "user_action": "Use one of: completed, pending, all"
+      },
+      "INVALID_LIMIT": {
+        "code": "INVALID_LIMIT",
+        "message": "Invalid limit value. Must be between 1 and 100",
+        "http_status": 400,
+        "description": "Provided limit is outside the allowed range",
+        "user_action": "Use a limit value between 1 and 100"
+      },
+      "INVALID_OFFSET": {
+        "code": "INVALID_OFFSET",
+        "message": "Invalid offset value. Must be 0 or greater",
+        "http_status": 400,
+        "description": "Provided offset is negative",
+        "user_action": "Use an offset value of 0 or greater"
+      },
+      "INVALID_TASK_ID": {
+        "code": "INVALID_TASK_ID",
+        "message": "Invalid task ID. Must be a positive integer",
+        "http_status": 400,
+        "description": "Provided task ID is not a valid positive integer",
+        "user_action": "Use a positive integer task ID"
+      }
+    },
+    "resource_errors": {
+      "TASK_NOT_FOUND": {
+        "code": "TASK_NOT_FOUND",
+        "message": "Task not found",
+        "http_status": 404,
+        "description": "Requested task does not exist or has been deleted",
+        "user_action": "Verify task ID and that the task exists"
+      },
+      "TASK_ALREADY_COMPLETED": {
+        "code": "TASK_ALREADY_COMPLETED",
+        "message": "Task is already marked as completed",
+        "http_status": 409,
+        "description": "Attempted to complete a task that is already completed",
+        "user_action": "Task is already completed, no action needed"
+      },
+      "TASK_ALREADY_DELETED": {
+        "code": "TASK_ALREADY_DELETED",
+        "message": "Task has already been deleted",
+        "http_status": 409,
+        "description": "Attempted to operate on a task that has been deleted",
+        "user_action": "Task is already deleted, cannot be modified"
+      },
+      "NO_TASKS_FOUND": {
+        "code": "NO_TASKS_FOUND",
+        "message": "No tasks found matching the specified criteria",
+        "http_status": 200,
+        "description": "Query returned no results (not an error, but informational)",
+        "user_action": "Try different filter criteria or create new tasks"
+      }
+    },
+    "database_errors": {
+      "DATABASE_CONNECTION_ERROR": {
+        "code": "DATABASE_CONNECTION_ERROR",
+        "message": "Database connection failed",
+        "http_status": 503,
+        "description": "Unable to establish connection to the database",
+        "user_action": "Try again later or contact support if the issue persists"
+      },
+      "DATABASE_QUERY_ERROR": {
+        "code": "DATABASE_QUERY_ERROR",
+        "message": "Database query execution failed",
+        "http_status": 500,
+        "description": "Error occurred while executing database query",
+        "user_action": "Try again later or contact support if the issue persists"
+      },
+      "DATABASE_CONSTRAINT_ERROR": {
+        "code": "DATABASE_CONSTRAINT_ERROR",
+        "message": "Database constraint violation",
+        "http_status": 400,
+        "description": "Operation would violate database constraints",
+        "user_action": "Check input data for constraint violations"
+      },
+      "DATABASE_TIMEOUT": {
+        "code": "DATABASE_TIMEOUT",
+        "message": "Database operation timed out",
+        "http_status": 504,
+        "description": "Database operation exceeded timeout limit",
+        "user_action": "Try again later or contact support if the issue persists"
+      }
+    },
+    "system_errors": {
+      "INTERNAL_SERVER_ERROR": {
+        "code": "INTERNAL_SERVER_ERROR",
+        "message": "Internal server error occurred",
+        "http_status": 500,
+        "description": "Unexpected error occurred during request processing",
+        "user_action": "Try again later or contact support if the issue persists"
+      },
+      "SERVICE_UNAVAILABLE": {
+        "code": "SERVICE_UNAVAILABLE",
+        "message": "MCP server temporarily unavailable",
+        "http_status": 503,
+        "description": "MCP server is currently experiencing issues",
+        "user_action": "Try again later"
+      },
+      "RATE_LIMIT_EXCEEDED": {
+        "code": "RATE_LIMIT_EXCEEDED",
+        "message": "Rate limit exceeded. Please try again later.",
+        "http_status": 429,
+        "description": "Too many requests in a short time period",
+        "user_action": "Wait before making additional requests"
+      },
+      "MEMORY_LIMIT_EXCEEDED": {
+        "code": "MEMORY_LIMIT_EXCEEDED",
+        "message": "Server memory limit exceeded",
+        "http_status": 503,
+        "description": "MCP server has exceeded allocated memory limits",
+        "user_action": "Try again later when server resources are available"
+      }
+    }
+  },
+  "error_response_examples": {
+    "authentication_example": {
+      "success": false,
+      "error": {
+        "code": "AUTH_TOKEN_EXPIRED",
+        "message": "JWT authentication token has expired",
+        "details": {
+          "token_expired_at": "2025-01-12T09:30:00Z",
+          "current_time": "2025-01-12T10:30:00Z"
+        }
+      },
+      "correlation_id": "550e8400-e29b-41d4-a716-446655440000",
+      "timestamp": "2025-01-12T10:30:00Z"
+    },
+    "validation_example": {
+      "success": false,
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Input validation failed",
+        "details": {
+          "field": "title",
+          "reason": "Title must be at least 1 character long"
+        }
+      },
+      "correlation_id": "550e8400-e29b-41d4-a716-446655440001",
+      "timestamp": "2025-01-12T10:30:00Z"
+    },
+    "resource_example": {
+      "success": false,
+      "error": {
+        "code": "TASK_NOT_FOUND",
+        "message": "Task not found",
+        "details": {
+          "task_id": 999,
+          "user_id": 42
+        }
+      },
+      "correlation_id": "550e8400-e29b-41d4-a716-446655440002",
+      "timestamp": "2025-01-12T10:30:00Z"
+    }
+  }
+}

@@ -142,9 +142,21 @@ class TaskService:
 
         # Update fields (only non-None values)
         update_data = task_update.model_dump(exclude_unset=True)
+        
+        import structlog
+        trace_logger = structlog.get_logger("trace")
+        trace_logger.info("TRACE: TaskUpdate payload", 
+                         task_id=task_id, 
+                         payload=update_data,
+                         raw_update=task_update.model_dump())
 
         # Add updated_at timestamp
         update_data["updated_at"] = datetime.utcnow()
+
+        # Handle status -> is_completed mapping for frontend compatibility
+        if "status" in update_data:
+            status_val = update_data.pop("status")
+            update_data["is_completed"] = (status_val == "completed")
 
         # Update task
         for field, value in update_data.items():

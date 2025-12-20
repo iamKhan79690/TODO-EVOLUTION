@@ -1,0 +1,440 @@
+# WebSocket API Specification
+# AI Chat Assistant Real-time Communication
+
+**Version**: 1.0.0
+**Protocol**: WebSocket with Socket.io
+**Endpoint**: `ws://localhost:8000/ws/chat`
+
+## Connection
+
+### Authentication
+WebSocket connections must be authenticated via JWT token passed as query parameter:
+
+```
+ws://localhost:8000/ws/chat?token=<jwt_token>
+```
+
+### Connection Flow
+1. Client connects with JWT token
+2. Server validates token and extracts user_id
+3. Client joins user-specific room: `user_{user_id}`
+4. Client emits `join_conversation` for specific conversation
+
+## Events
+
+### Client → Server Events
+
+#### `join_conversation`
+Join a specific conversation room.
+
+```json
+{
+  "event": "join_conversation",
+  "data": {
+    "conversation_id": "uuid",
+    "room_id": "conversation_{conversation_id}"
+  }
+}
+```
+
+**Server Response**:
+```json
+{
+  "event": "conversation_joined",
+  "data": {
+    "conversation_id": "uuid",
+    "room_id": "conversation_{conversation_id}",
+    "online_users": 1,
+    "timestamp": "2025-01-15T10:30:00Z"
+  }
+}
+```
+
+#### `leave_conversation`
+Leave a conversation room.
+
+```json
+{
+  "event": "leave_conversation",
+  "data": {
+    "conversation_id": "uuid"
+  }
+}
+```
+
+#### `send_message`
+Send a message to conversation.
+
+```json
+{
+  "event": "send_message",
+  "data": {
+    "conversation_id": "uuid",
+    "message": {
+      "content": {
+        "text": "Add task to buy groceries"
+      },
+      "message_type": "text",
+      "metadata": {}
+    },
+    "temp_id": "client-generated-temp-id"
+  }
+}
+```
+
+**Server Response** (pending status):
+```json
+{
+  "event": "message_status",
+  "data": {
+    "temp_id": "client-generated-temp-id",
+    "status": "pending",
+    "message_id": null,
+    "timestamp": "2025-01-15T10:30:00Z"
+  }
+}
+```
+
+#### `typing_start`
+Indicate user is typing.
+
+```json
+{
+  "event": "typing_start",
+  "data": {
+    "conversation_id": "uuid"
+  }
+}
+```
+
+#### `typing_stop`
+Indicate user stopped typing.
+
+```json
+{
+  "event": "typing_stop",
+  "data": {
+    "conversation_id": "uuid"
+  }
+}
+```
+
+### Server → Client Events
+
+#### `message_received`
+New message received in conversation.
+
+```json
+{
+  "event": "message_received",
+  "data": {
+    "message": {
+      "id": "uuid",
+      "conversation_id": "uuid",
+      "role": "user|assistant",
+      "content": {
+        "text": "Message content",
+        "entities": {},
+        "intent_detected": "create_task"
+      },
+      "timestamp": "2025-01-15T10:30:00Z",
+      "message_type": "text",
+      "operation_status": "delivered",
+      "operation_type": "create_task|update_task|complete_task|delete_task",
+      "operation_result": {
+        "task_id": "uuid",
+        "result": "success",
+        "task": {
+          "id": "uuid",
+          "title": "Task title",
+          "description": "Task description",
+          "completed": false
+        }
+      },
+      "metadata": {}
+    },
+    "conversation_id": "uuid",
+    "temp_id": "client-generated-temp-id",
+    "timestamp": "2025-01-15T10:30:00Z"
+  }
+}
+```
+
+#### `message_status`
+Update on message processing status.
+
+```json
+{
+  "event": "message_status",
+  "data": {
+    "temp_id": "client-generated-temp-id",
+    "message_id": "uuid",
+    "status": "processing|delivered|failed",
+    "error_details": {
+      "error_code": "validation_failed",
+      "message": "Task title is required",
+      "retry_possible": true
+    },
+    "timestamp": "2025-01-15T10:30:00Z"
+  }
+}
+```
+
+#### `ai_thinking`
+Indicate AI is processing message.
+
+```json
+{
+  "event": "ai_thinking",
+  "data": {
+    "conversation_id": "uuid",
+    "message_id": "uuid",
+    "status": "started|stopped",
+    "timestamp": "2025-01-15T10:30:00Z"
+  }
+}
+```
+
+#### `task_operation`
+Real-time update on task operations.
+
+```json
+{
+  "event": "task_operation",
+  "data": {
+    "conversation_id": "uuid",
+    "message_id": "uuid",
+    "operation": {
+      "type": "create_task|update_task|complete_task|delete_task",
+      "task_id": "uuid",
+      "status": "pending|success|failed",
+      "result": {
+        "task": {
+          "id": "uuid",
+          "title": "Task title",
+          "description": "Task description",
+          "completed": false,
+          "created_at": "2025-01-15T10:30:00Z"
+        }
+      },
+      "error_message": "Error details if failed",
+      "processing_time_ms": 1250
+    },
+    "timestamp": "2025-01-15T10:30:00Z"
+  }
+}
+```
+
+#### `typing_indicator`
+Show when other user (or AI) is typing.
+
+```json
+{
+  "event": "typing_indicator",
+  "data": {
+    "conversation_id": "uuid",
+    "user_id": "uuid",
+    "is_typing": true,
+    "user_type": "user|assistant",
+    "timestamp": "2025-01-15T10:30:00Z"
+  }
+}
+```
+
+#### `conversation_updated`
+Conversation metadata updated.
+
+```json
+{
+  "event": "conversation_updated",
+  "data": {
+    "conversation": {
+      "id": "uuid",
+      "title": "Updated title",
+      "updated_at": "2025-01-15T10:30:00Z",
+      "messages_count": 15,
+      "metadata": {}
+    },
+    "timestamp": "2025-01-15T10:30:00Z"
+  }
+}
+```
+
+#### `connection_status`
+Connection status updates.
+
+```json
+{
+  "event": "connection_status",
+  "data": {
+    "status": "connected|reconnecting|disconnected",
+    "message": "Connection established",
+    "retry_count": 0,
+    "timestamp": "2025-01-15T10:30:00Z"
+  }
+}
+```
+
+#### `error`
+Error occurred during operation.
+
+```json
+{
+  "event": "error",
+  "data": {
+    "error_code": "validation_failed|authentication_error|rate_limit_exceeded",
+    "message": "Human-readable error message",
+    "details": {
+      "field": "message",
+      "issue": "Message too long"
+    },
+    "timestamp": "2025-01-15T10:30:00Z",
+    "request_id": "uuid"
+  }
+}
+```
+
+## Error Handling
+
+### Connection Errors
+
+| Error | Description | Client Action |
+|-------|-------------|---------------|
+| `authentication_failed` | Invalid or expired JWT token | Redirect to login |
+| `rate_limit_exceeded` | Too many connection attempts | Exponential backoff |
+| `room_not_found` | Conversation not found or no access | Show error message |
+
+### Message Errors
+
+| Error | Description | Client Action |
+|-------|-------------|---------------|
+| `message_too_long` | Message exceeds 2000 characters | Show validation error |
+| `invalid_message_format` | Malformed message content | Show validation error |
+| `conversation_not_found` | Conversation not found | Show error message |
+| `permission_denied` | No access to conversation | Show error message |
+
+### Operation Errors
+
+| Error | Description | Client Action |
+|-------|-------------|---------------|
+| `ai_processing_failed` | AI unable to process message | Show error, offer retry |
+| `task_operation_failed` | Task operation failed | Show error details |
+| `timeout` | Operation took too long | Show timeout error |
+
+## Rate Limiting
+
+### Connection Limits
+- **Connections per user**: 5 concurrent connections
+- **Connection rate**: 10 connections per minute per user
+- **Room joins**: 50 joins per minute per user
+
+### Message Limits
+- **Message rate**: 60 messages per minute per conversation
+- **Message size**: 10KB maximum
+- **AI processing**: 30 AI requests per minute per user
+
+### Retry Strategy
+```javascript
+// Exponential backoff for connection retries
+const retryDelays = [1000, 2000, 4000, 8000, 16000]; // ms
+const maxRetries = 5;
+
+function connectWithRetry(attempt = 0) {
+  if (attempt >= maxRetries) {
+    showConnectionError('Unable to connect after multiple attempts');
+    return;
+  }
+
+  socket.connect();
+
+  socket.on('disconnect', () => {
+    setTimeout(() => {
+      connectWithRetry(attempt + 1);
+    }, retryDelays[Math.min(attempt, retryDelays.length - 1)]);
+  });
+}
+```
+
+## Security Considerations
+
+### Authentication
+- JWT tokens validated on every connection
+- User isolation enforced at room level
+- Token expiration checked periodically
+
+### Message Validation
+- All message content validated server-side
+- XSS protection for message content
+- SQL injection prevention via parameterized queries
+
+### Room Access Control
+- Users can only join conversations they own
+- Room membership verified on join and message send
+- Automatic cleanup of unused rooms
+
+## Performance Optimization
+
+### Connection Pooling
+```python
+# Server-side connection management
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[str, WebSocket] = {}
+        self.user_rooms: Dict[str, Set[str]] = {}
+        self.room_users: Dict[str, Set[str]] = {}
+
+    async def connect(self, websocket: WebSocket, user_id: str):
+        await websocket.accept()
+        self.active_connections[user_id] = websocket
+        self.user_rooms[user_id] = set()
+```
+
+### Message Compression
+- Enable WebSocket compression (permessage-deflate)
+- Batch multiple small messages when possible
+- Use efficient JSON serialization
+
+### Memory Management
+- Limit message history per room
+- Cleanup inactive connections
+- Periodic cleanup of expired contexts
+
+## Monitoring and Metrics
+
+### Connection Metrics
+- Active connections per user
+- Connection establishment time
+- Reconnection frequency
+- Room occupancy rates
+
+### Message Metrics
+- Message throughput (messages/second)
+- AI processing time distribution
+- Error rates by type
+- Message delivery latency
+
+### Performance Metrics
+- WebSocket frame processing time
+- Memory usage per connection
+- CPU usage during peak load
+- Network bandwidth utilization
+
+## Testing
+
+### Unit Tests
+- Connection authentication
+- Message validation
+- Room management
+- Error handling
+
+### Integration Tests
+- End-to-end message flow
+- Multi-user conversation
+- Connection resilience
+- Rate limiting
+
+### Load Tests
+- 500 concurrent connections
+- Message throughput testing
+- Memory leak detection
+- Performance regression testing

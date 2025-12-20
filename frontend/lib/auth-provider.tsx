@@ -30,10 +30,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const initializeAuth = async () => {
       try {
         // Check if user is already authenticated
-        const session = await betterAuthClient.getSession();
+        const result = await betterAuthClient.getSession();
 
-        if (session?.user) {
-          setUser(session.user);
+        // Handle union type: check if result has data property
+        if (result && 'data' in result && result.data?.user) {
+          setUser(result.data.user as unknown as User);
           setIsAuthenticated(true);
         } else {
           setUser(null);
@@ -60,8 +61,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         password,
       });
 
-      if (result?.user) {
-        setUser(result.user);
+      // Handle union type
+      if (result && 'data' in result && result.data?.user) {
+        setUser(result.data.user as unknown as User);
         setIsAuthenticated(true);
       } else {
         throw new Error('Sign in failed');
@@ -84,8 +86,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         name,
       });
 
-      if (result?.user) {
-        setUser(result.user);
+      // Handle union type
+      if (result && 'data' in result && result.data?.user) {
+        setUser(result.data.user as unknown as User);
         setIsAuthenticated(true);
       } else {
         throw new Error('Sign up failed');
@@ -118,10 +121,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Refresh user session
   const refresh = async () => {
     try {
-      const session = await betterAuthClient.getSession();
+      const result = await betterAuthClient.getSession();
 
-      if (session?.user) {
-        setUser(session.user);
+      // Handle union type
+      if (result && 'data' in result && result.data?.user) {
+        setUser(result.data.user as unknown as User);
         setIsAuthenticated(true);
       } else {
         setUser(null);

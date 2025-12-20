@@ -1,0 +1,859 @@
+openapi: 3.0.3
+info:
+  title: TODO-Evolution Chat API
+  description: RESTful API for AI Chat Assistant functionality in TODO-Evolution application
+  version: 1.0.0
+  contact:
+    name: TODO-Evolution Development Team
+    email: dev@todo-evolution.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.todo-evolution.com
+    description: Production server
+
+paths:
+  /api/chat/conversations:
+    get:
+      tags:
+        - Conversations
+      summary: List user conversations
+      description: Retrieve all conversations for the authenticated user
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of conversations to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of conversations to skip for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: active_only
+          in: query
+          description: Filter to only active conversations
+          required: false
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: List of conversations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConversationSummary'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+                  total:
+                    type: integer
+                    description: Total number of conversations
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Conversations
+      summary: Create new conversation
+      description: Create a new conversation for the authenticated user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: Optional title for the conversation
+                  maxLength: 255
+                metadata:
+                  type: object
+                  description: Additional conversation metadata
+                  additionalProperties: true
+              required: []
+      responses:
+        '201':
+          description: Conversation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/chat/conversations/{conversation_id}:
+    get:
+      tags:
+        - Conversations
+      summary: Get conversation details
+      description: Retrieve detailed information about a specific conversation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Conversation retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags:
+        - Conversations
+      summary: Update conversation
+      description: Update conversation metadata or status
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 255
+                is_active:
+                  type: boolean
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Conversation updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags:
+        - Conversations
+      summary: Delete conversation
+      description: Delete a conversation and all its messages
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Conversation deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/chat/conversations/{conversation_id}/messages:
+    get:
+      tags:
+        - Messages
+      summary: Get conversation messages
+      description: Retrieve all messages in a conversation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Maximum number of messages to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          description: Number of messages to skip for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: before
+          in: query
+          description: Get messages before this timestamp
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: after
+          in: query
+          description: Get messages after this timestamp
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Messages retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+                  total:
+                    type: integer
+                    description: Total number of messages
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Messages
+      summary: Send message
+      description: Send a new message to the conversation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMessageRequest'
+      responses:
+        '201':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/chat/conversations/{conversation_id}/messages/{message_id}:
+    get:
+      tags:
+        - Messages
+      summary: Get message details
+      description: Retrieve detailed information about a specific message
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: message_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Message retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/chat/conversations/{conversation_id}/context:
+    get:
+      tags:
+        - Context
+      summary: Get conversation context
+      description: Retrieve AI context data for a conversation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: context_keys
+          in: query
+          description: Specific context keys to retrieve
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: Context retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contexts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConversationContext'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags:
+        - Context
+      summary: Update conversation context
+      description: Update AI context data for a conversation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                context_key:
+                  type: string
+                  maxLength: 100
+                context_value:
+                  type: object
+                  description: JSON context value
+                expires_at:
+                  type: string
+                  format: date-time
+                  description: Optional expiration time
+              required:
+                - context_key
+                - context_value
+      responses:
+        '200':
+          description: Context updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationContext'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/chat/ai/process:
+    post:
+      tags:
+        - AI Processing
+      summary: Process message with AI
+      description: Send a message to AI for processing and get response
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                conversation_id:
+                  type: string
+                  format: uuid
+                  description: Optional conversation ID (creates new if not provided)
+                message:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+                  description: User message to process
+                context:
+                  type: object
+                  description: Additional context for AI processing
+                  additionalProperties: true
+              required:
+                - message
+      responses:
+        '200':
+          description: Message processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                    description: AI response message
+                  conversation_id:
+                    type: string
+                    format: uuid
+                    description: Conversation ID
+                  operations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TaskOperation'
+                    description: Task operations performed by AI
+                  processing_time_ms:
+                    type: integer
+                    description: Time taken to process in milliseconds
+                  intent_detected:
+                    type: string
+                    description: AI-detected user intent
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/chat/health:
+    get:
+      tags:
+        - System
+      summary: Chat service health check
+      description: Check health status of chat service and dependencies
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded, unhealthy]
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                  dependencies:
+                    type: object
+                    additionalProperties:
+                      type: string
+                      enum: [healthy, unhealthy]
+                  uptime_seconds:
+                    type: integer
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        user_id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174001"
+        title:
+          type: string
+          example: "Shopping List"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        is_active:
+          type: boolean
+          example: true
+        messages_count:
+          type: integer
+          example: 15
+        last_message_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+          example:
+            theme: "shopping"
+            priority: "normal"
+      required:
+        - id
+        - user_id
+        - created_at
+        - updated_at
+        - is_active
+        - messages_count
+
+    ConversationSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        messages_count:
+          type: integer
+        last_message_preview:
+          type: string
+          description: Preview of the last message
+      required:
+        - id
+        - title
+        - created_at
+        - updated_at
+        - messages_count
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversation_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: object
+          description: JSON content based on message type
+          example:
+            text: "Add task to buy groceries tomorrow"
+            intent_detected: "create_task"
+            entities:
+              action: "add"
+              item: "groceries"
+              due_date: "tomorrow"
+        timestamp:
+          type: string
+          format: date-time
+        message_type:
+          type: string
+          enum: [text, image, file, operation_result]
+          default: text
+        operation_status:
+          type: string
+          enum: [pending, processing, delivered, failed]
+          default: delivered
+        operation_type:
+          type: string
+          example: "create_task"
+        operation_result:
+          type: object
+          description: Results of AI operations
+          example:
+            task_id: "uuid"
+            result: "success"
+        error_details:
+          type: object
+          description: Error information if operation failed
+          example:
+            error_code: "validation_failed"
+            message: "Task title is required"
+        metadata:
+          type: object
+          additionalProperties: true
+      required:
+        - id
+        - conversation_id
+        - role
+        - content
+        - timestamp
+        - message_type
+        - operation_status
+
+    CreateMessageRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user]
+          default: user
+        content:
+          type: object
+          properties:
+            text:
+              type: string
+              minLength: 1
+              maxLength: 2000
+          required:
+            - text
+        message_type:
+          type: string
+          enum: [text, image, file]
+          default: text
+        metadata:
+          type: object
+          additionalProperties: true
+      required:
+        - content
+
+    ConversationContext:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversation_id:
+          type: string
+          format: uuid
+        context_key:
+          type: string
+          example: "recent_tasks"
+        context_value:
+          type: object
+          description: JSON context value
+          example:
+            task_ids: ["uuid1", "uuid2"]
+            last_updated: "2025-01-15T10:30:00Z"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - conversation_id
+        - context_key
+        - context_value
+        - created_at
+        - updated_at
+
+    TaskOperation:
+      type: object
+      properties:
+        operation_type:
+          type: string
+          enum: [create_task, update_task, complete_task, delete_task]
+        task_id:
+          type: string
+          format: uuid
+        operation_data:
+          type: object
+          description: Input data for the operation
+          example:
+            title: "Buy groceries"
+            description: "Weekly shopping"
+            due_date: "2025-01-16"
+        result_status:
+          type: string
+          enum: [success, failed, pending]
+        result_data:
+          type: object
+          description: Operation results
+          example:
+            id: "uuid"
+            title: "Buy groceries"
+            created_at: "2025-01-15T10:30:00Z"
+        error_message:
+          type: string
+          description: Error message if operation failed
+        processing_time_ms:
+          type: integer
+          description: Time taken to process in milliseconds
+      required:
+        - operation_type
+        - result_status
+
+    Pagination:
+      type: object
+      properties:
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+        has_next:
+          type: boolean
+          example: true
+        has_prev:
+          type: boolean
+          example: false
+        total_pages:
+          type: integer
+          example: 5
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+        request_id:
+          type: string
+          description: Request ID for debugging
+      required:
+        - error
+        - message
+        - timestamp
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized access
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+tags:
+  - name: Conversations
+    description: Conversation management operations
+  - name: Messages
+    description: Message operations
+  - name: Context
+    description: AI context management
+  - name: AI Processing
+    description: AI message processing
+  - name: System
+    description: System operations

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 from enum import Enum
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, computed_field
 
 
 class Priority(str, Enum):
@@ -70,6 +70,13 @@ class TaskUpdate(BaseModel):
     due_date: Optional[datetime] = None
     recurrence_pattern: Optional[RecurrencePattern] = None
     is_completed: Optional[bool] = None
+    status: Optional[str] = None # For frontend compatibility
+
+    @field_validator('status')
+    @classmethod
+    def validate_status(cls, v):
+        """Map frontend status to is_completed if provided."""
+        return v
 
     @field_validator('title')
     @classmethod
@@ -87,6 +94,30 @@ class TaskResponse(TaskBase):
     created_at: datetime
     updated_at: datetime
     user_id: int
+
+    @computed_field
+    @property
+    def status(self) -> str:
+        """Frontend compatibility field."""
+        return "completed" if self.is_completed else "pending"
+
+    @computed_field
+    @property
+    def dueDate(self) -> Optional[datetime]:
+        """Frontend compatibility alias."""
+        return self.due_date
+
+    @computed_field
+    @property
+    def createdAt(self) -> datetime:
+        """Frontend compatibility alias."""
+        return self.created_at
+
+    @computed_field
+    @property
+    def updatedAt(self) -> datetime:
+        """Frontend compatibility alias."""
+        return self.updated_at
 
     class Config:
         from_attributes = True

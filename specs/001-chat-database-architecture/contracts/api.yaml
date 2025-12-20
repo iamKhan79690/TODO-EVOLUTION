@@ -1,0 +1,517 @@
+openapi: 3.0.3
+info:
+  title: Chat Database API
+  description: RESTful API for Phase III AI Chatbot conversations and messages
+  version: 1.0.0
+  contact:
+    name: TODO-Evolution Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.todo-evolution.com
+    description: Production server
+
+paths:
+  # Conversation Management
+  /api/{user_id}/conversations:
+    get:
+      summary: List user conversations
+      description: Retrieve paginated list of conversations for authenticated user
+      tags:
+        - Conversations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User ID (must match JWT token)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Maximum number of conversations to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Number of conversations to skip
+      responses:
+        '200':
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: Create new conversation
+      description: Create a new conversation for the authenticated user
+      tags:
+        - Conversations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User ID (must match JWT token)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 255
+                  description: Optional conversation title
+              example:
+                title: "AI Assistant Chat"
+      responses:
+        '201':
+          description: Conversation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/{user_id}/conversations/{conversation_id}:
+    get:
+      summary: Get conversation details
+      description: Retrieve details of a specific conversation
+      tags:
+        - Conversations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User ID (must match JWT token)
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Conversation ID
+      responses:
+        '200':
+          description: Conversation details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      summary: Delete conversation
+      description: Delete a conversation and all its messages
+      tags:
+        - Conversations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User ID (must match JWT token)
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Conversation ID
+      responses:
+        '204':
+          description: Conversation deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # Message Management
+  /api/{user_id}/conversations/{conversation_id}/messages:
+    get:
+      summary: Get conversation messages
+      description: Retrieve paginated list of messages in a conversation
+      tags:
+        - Messages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User ID (must match JWT token)
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Conversation ID
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          description: Maximum number of messages to return
+        - name: before
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Get messages before this timestamp (for pagination)
+      responses:
+        '200':
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: Send message
+      description: Send a new message to a conversation
+      tags:
+        - Messages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User ID (must match JWT token)
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Conversation ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+                - role
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 10000
+                  description: Message content (1-10,000 characters, text-only)
+                  example: "Hello, I need help with my tasks"
+                role:
+                  type: string
+                  enum: [user, assistant]
+                  description: Message role (user or assistant)
+                  example: user
+                tool_calls:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      arguments:
+                        type: object
+                  description: Tool calls for Phase III AI integration (optional)
+              example:
+                content: "Hello, I need help with my tasks"
+                role: "user"
+      responses:
+        '201':
+          description: Message created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Conversation unique identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        user_id:
+          type: string
+          format: uuid
+          description: User ID who owns this conversation
+          example: "550e8400-e29b-41d4-a716-446655440001"
+        title:
+          type: string
+          maxLength: 255
+          description: Optional conversation title
+          example: "AI Assistant Chat"
+        created_at:
+          type: string
+          format: date-time
+          description: Conversation creation timestamp
+          example: "2025-01-12T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2025-01-12T10:35:00Z"
+        message_count:
+          type: integer
+          minimum: 0
+          description: Number of messages in this conversation
+          example: 15
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Message unique identifier
+          example: "550e8400-e29b-41d4-a716-446655440002"
+        conversation_id:
+          type: string
+          format: uuid
+          description: Conversation ID this message belongs to
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        user_id:
+          type: string
+          format: uuid
+          description: User ID who sent this message
+          example: "550e8400-e29b-41d4-a716-446655440001"
+        role:
+          type: string
+          enum: [user, assistant]
+          description: Message role (user or assistant)
+          example: user
+        content:
+          type: string
+          minLength: 1
+          maxLength: 10000
+          description: Message content (1-10,000 characters, text-only)
+          example: "Hello, I need help with my tasks"
+        tool_calls:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              arguments:
+                type: object
+          description: Tool calls invoked by this message (Phase III AI integration)
+          example: []
+        created_at:
+          type: string
+          format: date-time
+          description: Message creation timestamp
+          example: "2025-01-12T10:31:00Z"
+
+    Pagination:
+      type: object
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum items per page
+          example: 20
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of items skipped
+          example: 0
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of items
+          example: 45
+        has_next:
+          type: boolean
+          description: Whether there are more items
+          example: true
+        has_prev:
+          type: boolean
+          description: Whether there are previous items
+          example: false
+
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: Human-readable error description
+          example: "User ID does not match JWT token"
+        error_code:
+          type: string
+          description: Machine-readable error code
+          example: "USER_ID_MISMATCH"
+        timestamp:
+          type: string
+          format: date-time
+          description: Error occurrence timestamp
+          example: "2025-01-12T10:30:00Z"
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: "Message content cannot be empty"
+            error_code: "INVALID_CONTENT"
+            timestamp: "2025-01-12T10:30:00Z"
+
+    Unauthorized:
+      description: Unauthorized - missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: "Missing or invalid JWT token"
+            error_code: "INVALID_TOKEN"
+            timestamp: "2025-01-12T10:30:00Z"
+
+    Forbidden:
+      description: Forbidden - user not authorized to access this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: "User ID does not match JWT token"
+            error_code: "USER_ID_MISMATCH"
+            timestamp: "2025-01-12T10:30:00Z"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: "Conversation not found or does not belong to user"
+            error_code: "CONVERSATION_NOT_FOUND"
+            timestamp: "2025-01-12T10:30:00Z"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: "Internal server error occurred"
+            error_code: "INTERNAL_ERROR"
+            timestamp: "2025-01-12T10:30:00Z"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from Better Auth authentication
+
+tags:
+  - name: Conversations
+    description: Conversation management operations
+  - name: Messages
+    description: Message operations within conversations

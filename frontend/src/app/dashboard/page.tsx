@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import TaskForm from '@/components/tasks/TaskForm';
 import TaskItem from '@/components/tasks/TaskItem';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { FloatingChatButton } from '@/components/chat/FloatingChatButton';
 import { taskAPI } from '@/lib/api';
 import { Task, CreateTaskDTO, UpdateTaskDTO } from '@/lib/types';
 
@@ -15,6 +16,15 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadTasks();
+
+    // Listen for custom refresh events from the AI Chat
+    const handleRefresh = () => {
+      console.log('Refreshing tasks due to AI action');
+      loadTasks();
+    };
+
+    window.addEventListener('tasks-updated', handleRefresh);
+    return () => window.removeEventListener('tasks-updated', handleRefresh);
   }, []);
 
   const loadTasks = async () => {
@@ -144,6 +154,9 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Floating Chat Button */}
+      <FloatingChatButton />
     </div>
   );
 }
