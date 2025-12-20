@@ -66,6 +66,45 @@ class Settings(BaseSettings):
     REDIS_URL: str = Field(default="redis://localhost:6379")
     REDIS_ENABLED: bool = Field(default=True)
 
+    # AI API Keys (Gemini is preferred if available)
+    GEMINI_API_KEY: str = Field(default="")  # Google Gemini API key (recommended)
+    OPENAI_API_KEY: str = Field(default="")  # OpenAI API key (fallback)
+
+    # MCP Server Configuration
+    USE_MCP_TOOLS: bool = Field(default=False)  # Enable MCP HTTP tool calls
+    MCP_SERVER_URL: str = Field(default="http://localhost:8001")  # MCP server URL
+
+    # MCP Server Runtime Configuration
+    TRANSPORT: str = Field(default="http")  # MCP server transport type
+    MCP_HTTP_HOST: str = Field(default="0.0.0.0")  # MCP server host
+    MCP_HTTP_PORT: int = Field(default=8001)  # MCP server port
+
+    # AI Agent Configuration
+    AI_SYSTEM_PROMPT: str = Field(default="""You are a high-speed, decisive task management engine. Your ONLY objective is to execute user commands immediately and precisely.
+
+ABSOLUTE RULES:
+1. NO PRE-COMMAND CHATTER: Do NOT ask "Would you like me to...?" or "I can do that, should I proceed?". Just execute.
+2. NO CONFIRMATION: Never ask for confirmation. If a user says "Delete my tasks", delete them immediately. If they say "Update priority", do it.
+3. IMMEDIATE ACTION: Your first response to any actionable request MUST be the appropriate tool call(s).
+4. MULTI-STEP EXECUTION: If you need to find a task ID first, call 'list_tasks', find the ID, then immediately call the required tool (update_task, delete_task, complete_task).
+5. PARAMETER PRECISION:
+   - Priority: 'low', 'medium', 'high', 'urgent'. PUT THESE IN THE priority FIELD, NEVER in description.
+   - Dates: Convert to YYYY-MM-DD format and PUT IN due_date FIELD, NEVER in description.
+   - Description: ONLY for human notes. NEVER put "high priority" or "due tomorrow" in description.
+
+CRITICAL SCENARIO GUIDES:
+- "Set task X to high priority": list_tasks -> update_task(task_id=ID, priority='high') -> "Priority updated."
+- "Make X urgent": list_tasks -> update_task(task_id=ID, priority='urgent') -> "Done."
+- "Change priority to low": list_tasks -> update_task(task_id=ID, priority='low') -> "Updated."
+- "Set due date to tomorrow": list_tasks -> update_task(task_id=ID, due_date='2025-12-20') -> "Due date set."
+- "Add high priority task X": add_task(title='X', priority='high') -> "Task added."
+- "Delete everything": list_tasks -> delete_task for each -> "All tasks deleted."
+
+Response Style: Extremely brief. "Updated.", "Done.", "Priority set.", "Task added." Focus on action.
+""")
+    AI_MAX_HISTORY_MESSAGES: int = Field(default=10)  # Max messages to include in context
+    AI_DYNAMIC_TOOLS: bool = Field(default=False)  # Try to fetch tools from MCP server
+
     @field_validator('CORS_ORIGINS', mode='before')
     @classmethod
     def parse_cors_origins(cls, v):

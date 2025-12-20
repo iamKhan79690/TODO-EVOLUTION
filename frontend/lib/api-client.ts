@@ -76,12 +76,18 @@ async function apiRequest<T = any>(
 async function getAuthHeaders(): Promise<Record<string, string>> {
   try {
     // Get session from Better Auth
-    const session = await betterAuthClient.getSession();
+    const result = await betterAuthClient.getSession();
 
-    if (session?.user && session.accessToken) {
-      return {
-        'Authorization': `Bearer ${session.accessToken}`,
-      };
+    // Check if result is successful (not an error) and has data
+    if (result && 'data' in result && result.data?.user && result.data?.session) {
+      // Better Auth stores token in session
+      const token = (result.data.session as Record<string, unknown>).token ||
+        (result.data.session as Record<string, unknown>).accessToken;
+      if (token) {
+        return {
+          'Authorization': `Bearer ${token}`,
+        };
+      }
     }
 
     return {};

@@ -16,7 +16,7 @@ export class TaskAPI {
   private baseURL: string;
   private defaultHeaders: Record<string, string>;
 
-  constructor(baseURL: string = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://localhost:8001') {
+  constructor(baseURL: string = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://localhost:8000') {
     this.baseURL = baseURL;
     this.defaultHeaders = {
       'Content-Type': 'application/json',

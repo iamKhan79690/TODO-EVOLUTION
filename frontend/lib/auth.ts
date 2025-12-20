@@ -4,63 +4,32 @@
 
 import { createAuthClient } from 'better-auth/react';
 
-// Mock authentication configuration for MVP
-const mockAuthConfig = {
+// Better Auth client configuration
+const authConfig = {
   baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL || 'http://localhost:8001/api/auth',
   plugins: [],
 };
 
-// Create mock auth client for MVP
-export const betterAuthClient = createAuthClient(mockAuthConfig);
+// Create auth client
+export const betterAuthClient = createAuthClient(authConfig);
 
 // Export commonly used auth methods for easier access
+// Note: Only methods that exist in Better Auth client are exported
 export const {
-  // Authentication methods
   signIn,
   signUp,
   signOut,
   getSession,
-  refresh,
-
-  // User management
-  updateUser,
-  deleteUser,
-  changePassword,
-  resetPassword,
-  forgetPassword,
-
-  // Social providers (disabled for MVP)
-  // signInWithSocial,
-  // linkSocialAccount,
-
-  // Session management
-  listSessions,
-  revokeSession,
-  revokeAllSessions,
-
-  // Email verification
-  sendVerificationEmail,
-  verifyEmail,
-
-  // Two-factor authentication (disabled for MVP)
-  // enableTwoFactor,
-  // disableTwoFactor,
-  // verifyTwoFactor,
-
-  // Utility methods
-  useAuth,
-  useUser,
   useSession,
-  isAuthenticated,
 } = betterAuthClient;
 
 // Custom hooks for common authentication patterns
 export function useAuthenticatedUser() {
-  const { data: session, isLoading } = betterAuthClient.useSession();
+  const { data: session, isPending } = betterAuthClient.useSession();
 
   return {
     user: session?.user || null,
-    isLoading,
+    isLoading: isPending,
     isAuthenticated: !!session?.user,
   };
 }
@@ -68,8 +37,8 @@ export function useAuthenticatedUser() {
 // Helper function to check if user is authenticated
 export async function checkAuthentication(): Promise<boolean> {
   try {
-    const session = await betterAuthClient.getSession();
-    return !!session?.user;
+    const result = await betterAuthClient.getSession();
+    return !!(result && 'data' in result && result.data?.user);
   } catch (error) {
     console.error('Error checking authentication:', error);
     return false;
@@ -79,8 +48,11 @@ export async function checkAuthentication(): Promise<boolean> {
 // Helper function to get current user
 export async function getCurrentUser() {
   try {
-    const session = await betterAuthClient.getSession();
-    return session?.user || null;
+    const result = await betterAuthClient.getSession();
+    if (result && 'data' in result && result.data?.user) {
+      return result.data.user;
+    }
+    return null;
   } catch (error) {
     console.error('Error getting current user:', error);
     return null;

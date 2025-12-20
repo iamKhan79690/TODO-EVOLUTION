@@ -1,0 +1,736 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "TODO-Evolution MCP Server API",
+    "description": "Model Context Protocol (MCP) server for AI-powered task management",
+    "version": "1.0.0",
+    "contact": {
+      "name": "TODO-Evolution Team",
+      "url": "https://github.com/todo-evolution"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8001",
+      "description": "Development MCP server"
+    }
+  ],
+  "paths": {
+    "/tools/add_task": {
+      "post": {
+        "summary": "Create a new task",
+        "description": "Creates a new task for the authenticated user with the provided title and optional metadata",
+        "tags": ["Task Management"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddTaskRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Task created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/list_tasks": {
+      "post": {
+        "summary": "List user tasks",
+        "description": "Retrieves tasks for the authenticated user with optional filtering and pagination",
+        "tags": ["Task Management"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListTasksRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tasks retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TasksListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/complete_task": {
+      "post": {
+        "summary": "Mark task as completed",
+        "description": "Updates a task status to completed with completion timestamp",
+        "tags": ["Task Management"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteTaskRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Task marked as completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/update_task": {
+      "post": {
+        "summary": "Update task details",
+        "description": "Updates task title, description, priority, or due date",
+        "tags": ["Task Management"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTaskRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Task updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/delete_task": {
+      "post": {
+        "summary": "Delete a task",
+        "description": "Soft deletes a task by marking it as deleted (removes from listings but preserves data)",
+        "tags": ["Task Management"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteTaskRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Task deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteTaskResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "description": "Returns server health status and basic metrics",
+        "tags": ["System"],
+        "responses": {
+          "200": {
+            "description": "Server is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "TaskBase": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Unique task identifier"
+          },
+          "title": {
+            "type": "string",
+            "description": "Task title",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional task description",
+            "maxLength": 2000
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "completed", "cancelled"],
+            "description": "Current task status"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "urgent"],
+            "description": "Task priority level"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Task creation timestamp"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Optional due date",
+            "nullable": true
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Completion timestamp",
+            "nullable": true
+          }
+        },
+        "required": ["id", "title", "status", "priority", "created_at"]
+      },
+      "Task": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TaskBase"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "user_id": {
+                "type": "integer",
+                "description": "Owner user ID"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Task tags"
+              }
+            },
+            "required": ["user_id"]
+          }
+        ]
+      },
+      "AddTaskRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Task title",
+            "maxLength": 255,
+            "minLength": 1,
+            "example": "Buy groceries"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional task description",
+            "maxLength": 2000,
+            "example": "Buy milk, bread, and eggs from the grocery store"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "urgent"],
+            "default": "medium",
+            "description": "Task priority level"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Optional due date",
+            "nullable": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Task tags",
+            "default": []
+          },
+          "jwt_token": {
+            "type": "string",
+            "description": "JWT authentication token",
+            "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+          }
+        },
+        "required": ["title", "jwt_token"]
+      },
+      "ListTasksRequest": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["all", "pending", "completed", "in_progress", "cancelled"],
+            "default": "all",
+            "description": "Filter by task status"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["all", "low", "medium", "high", "urgent"],
+            "default": "all",
+            "description": "Filter by priority level"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20,
+            "description": "Maximum number of tasks to return"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0,
+            "description": "Number of tasks to skip (for pagination)"
+          },
+          "jwt_token": {
+            "type": "string",
+            "description": "JWT authentication token",
+            "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+          }
+        },
+        "required": ["jwt_token"]
+      },
+      "CompleteTaskRequest": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "ID of the task to complete",
+            "example": 123
+          },
+          "jwt_token": {
+            "type": "string",
+            "description": "JWT authentication token",
+            "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+          }
+        },
+        "required": ["task_id", "jwt_token"]
+      },
+      "UpdateTaskRequest": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "ID of the task to update",
+            "example": 123
+          },
+          "title": {
+            "type": "string",
+            "description": "New task title",
+            "maxLength": 255,
+            "minLength": 1,
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "description": "New task description",
+            "maxLength": 2000,
+            "nullable": true
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "urgent"],
+            "description": "New priority level",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "completed", "cancelled"],
+            "description": "New task status",
+            "nullable": true
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "New due date",
+            "nullable": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Updated task tags",
+            "nullable": true
+          },
+          "jwt_token": {
+            "type": "string",
+            "description": "JWT authentication token",
+            "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+          }
+        },
+        "required": ["task_id", "jwt_token"]
+      },
+      "DeleteTaskRequest": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "ID of the task to delete",
+            "example": 123
+          },
+          "jwt_token": {
+            "type": "string",
+            "description": "JWT authentication token",
+            "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+          }
+        },
+        "required": ["task_id", "jwt_token"]
+      },
+      "TaskResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Operation success status"
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Task"
+              }
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "Success message"
+          },
+          "correlation_id": {
+            "type": "string",
+            "description": "Request correlation ID for tracing"
+          }
+        },
+        "required": ["success", "correlation_id"]
+      },
+      "TasksListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Operation success status"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              },
+              "total_count": {
+                "type": "integer",
+                "description": "Total number of tasks matching filters"
+              },
+              "limit": {
+                "type": "integer",
+                "description": "Maximum number of tasks returned"
+              },
+              "offset": {
+                "type": "integer",
+                "description": "Number of tasks skipped for pagination"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "description": "Success message"
+          },
+          "correlation_id": {
+            "type": "string",
+            "description": "Request correlation ID for tracing"
+          }
+        },
+        "required": ["success", "correlation_id"]
+      },
+      "DeleteTaskResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Operation success status"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "task_id": {
+                "type": "integer",
+                "description": "Deleted task ID"
+              },
+              "deleted": {
+                "type": "boolean",
+                "description": "Deletion confirmation"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "description": "Success message"
+          },
+          "correlation_id": {
+            "type": "string",
+            "description": "Request correlation ID for tracing"
+          }
+        },
+        "required": ["success", "correlation_id"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Operation success status",
+            "example": false
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Error code for programmatic handling",
+                "example": "VALIDATION_ERROR"
+              },
+              "message": {
+                "type": "string",
+                "description": "Human-readable error message",
+                "example": "Task title is required"
+              }
+            },
+            "required": ["code", "message"]
+          },
+          "correlation_id": {
+            "type": "string",
+            "description": "Request correlation ID for tracing"
+          }
+        },
+        "required": ["success", "error", "correlation_id"]
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Server health status",
+            "example": "healthy"
+          },
+          "version": {
+            "type": "string",
+            "description": "MCP server version",
+            "example": "1.0.0"
+          },
+          "uptime_seconds": {
+            "type": "integer",
+            "description": "Server uptime in seconds"
+          },
+          "tools_available": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of available MCP tools",
+            "example": ["add_task", "list_tasks", "complete_task", "update_task", "delete_task"]
+          },
+          "database_status": {
+            "type": "string",
+            "description": "Database connection status",
+            "example": "connected"
+          }
+        },
+        "required": ["status", "version", "tools_available"]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Task Management",
+      "description": "Core task management operations"
+    },
+    {
+      "name": "System",
+      "description": "System monitoring and health checks"
+    }
+  ]
+}

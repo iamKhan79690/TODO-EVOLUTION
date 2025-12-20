@@ -1,0 +1,424 @@
+openapi: 3.0.3
+info:
+  title: JWT Authentication Middleware API
+  description: OpenAPI specification for JWT authentication middleware endpoints and error responses
+  version: 1.0.0
+  contact:
+    name: Todo Evolution Team
+    email: support@todo-evolution.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+paths:
+  # This document defines the contracts for the JWT middleware itself
+  # The middleware doesn't expose direct endpoints, but defines error response schemas
+
+components:
+  schemas:
+    # Error Response Models
+    AuthenticationError:
+      type: object
+      description: Standard error response for authentication failures
+      properties:
+        detail:
+          type: string
+          description: Human-readable error message
+        error_code:
+          type: string
+          enum: [AUTHENTICATION_REQUIRED, INVALID_TOKEN, EXPIRED_TOKEN, MALFORMED_TOKEN, SIGNATURE_ERROR]
+          description: Machine-readable error code
+        correlation_id:
+          type: string
+          format: uuid
+          description: Unique identifier for request tracing
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp in ISO 8601 format
+        path:
+          type: string
+          description: Request path where error occurred
+        method:
+          type: string
+          enum: [GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS]
+          description: HTTP method of failed request
+      required:
+        - detail
+        - error_code
+        - correlation_id
+        - timestamp
+
+    # Authentication Error Variants
+    MissingTokenError:
+      allOf:
+        - $ref: '#/components/schemas/AuthenticationError'
+      - type: object
+      properties:
+        error_code:
+          type: string
+          enum: [AUTHENTICATION_REQUIRED]
+        detail:
+          type: string
+          example: "Authentication required - Bearer token missing"
+        hint:
+          type: string
+          description: Helpful hint for fixing the error
+          example: "Include 'Authorization: Bearer <token>' header"
+
+    InvalidTokenError:
+      allOf:
+        - $ref: '#/components/schemas/AuthenticationError'
+      - type: object
+      properties:
+        error_code:
+          type: string
+          enum: [INVALID_TOKEN]
+        detail:
+          type: string
+          example: "Invalid authentication token"
+        validation_errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: Field that failed validation
+              message:
+                type: string
+                description: Validation error message
+          description: Detailed validation errors
+
+    ExpiredTokenError:
+      allOf:
+        - $ref: '#/components/schemas/AuthenticationError'
+      - type: object
+      properties:
+        error_code:
+          type: string
+          enum: [EXPIRED_TOKEN]
+        detail:
+          type: string
+          example: "Authentication token has expired"
+        expired_at:
+          type: string
+          format: date-time
+          description: When the token expired
+        refresh_hint:
+          type: string
+          description: Hint for token refresh
+          example: "Please refresh your authentication token"
+
+    MalformedTokenError:
+      allOf:
+        - '#/components/schemas/AuthenticationError'
+      - type: object
+      properties:
+        error_code:
+          type: string
+          enum: [MALFORMED_TOKEN]
+        detail:
+          type: string
+          example: "Malformed authentication token"
+        format_error:
+          type: string
+          description: Specific format validation error
+          example: "Token must have 3 parts separated by dots"
+
+    SignatureError:
+      allOf:
+        - '#/components/schemas/AuthenticationError'
+      - type: object
+        properties:
+        error_code:
+          type: string
+          enum: [SIGNATURE_ERROR]
+        detail:
+          type: string
+          example: "Invalid token signature"
+        signature_algorithm:
+          type: string
+          description: Expected signature algorithm
+          example: "HS256"
+        verification_failed:
+          type: boolean
+          description: Whether signature verification failed
+          example: true
+
+    # Security Event Models
+    SecurityEvent:
+      type: object
+      description: Security event for monitoring and alerting
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          description: Unique event identifier
+        event_type:
+          type: string
+          enum: [AUTHENTICATION_SUCCESS, AUTHENTICATION_FAILURE, RATE_LIMIT_EXCEEDED, SUSPICIOUS_ACTIVITY, SECURITY_ALERT]
+          description: Type of security event
+        timestamp:
+          type: string
+          format: date-time
+          description: Event timestamp
+        correlation_id:
+          type: string
+          format: uuid
+          description: Request correlation ID
+        user_id:
+          type: string
+          description: User identifier (if available)
+        client_ip:
+          type: string
+          format: ipv4
+          description: Client IP address
+        user_agent:
+          type: string
+          description: User agent string
+        endpoint:
+          type: string
+          description: Requested endpoint
+        threat_level:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+          description: Threat assessment level
+        details:
+          type: object
+          description: Additional event details
+        processing_time_ms:
+          type: number
+          description: Processing time in milliseconds
+      required:
+        - event_id
+        - event_type
+        - timestamp
+        - correlation_id
+        - threat_level
+
+    # JWT Token Models
+    JWTPayload:
+      type: object
+      description: JWT payload structure
+      properties:
+        sub:
+          type: string
+          description: Subject (user identifier)
+          example: "user_12345"
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "user@example.com"
+        exp:
+          type: integer
+          description: Expiration timestamp (Unix epoch)
+        iat:
+          type: integer
+          description: Issued at timestamp (Unix epoch)
+        iss:
+          type: string
+          description: Token issuer
+          example: "todo-evolution-auth"
+        aud:
+          type: string
+          description: Token audience
+          example: "todo-evolution-api"
+        jti:
+          type: string
+          description: JWT ID (for token tracking)
+          example: "abc123-def456"
+        role:
+          type: string
+          description: User role
+          example: "user"
+        permissions:
+          type: array
+          items:
+            type: string
+          description: User permissions
+          example: ["read:tasks", "write:tasks"]
+      required:
+        - sub
+        - exp
+
+    # User Authentication Context
+    AuthenticationContext:
+      type: object
+      description: User authentication context attached to requests
+      properties:
+        user_id:
+          type: string
+          description: Authenticated user ID
+          example: "user_12345"
+        email:
+          type: string
+          format: email
+          description: User email
+          example: "user@example.com"
+        expires_at:
+          type: string
+          format: date-time
+          description: Token expiration time
+        issued_at:
+          type: string
+          format: date-time
+          description: Token issuance time
+        roles:
+          type: array
+          items:
+            type: string
+          description: User roles
+          example: ["user"]
+        permissions:
+          type: array
+          items:
+            type: string
+          description: User permissions
+          example: ["read:tasks", "write:tasks"]
+        session_id:
+          type: string
+          description: Session identifier
+          example: "sess_abc123"
+      required:
+        - user_id
+        - email
+        - expires_at
+
+    # Configuration Models
+    MiddlewareConfiguration:
+      type: object
+      description: JWT middleware configuration
+      properties:
+        secret_key:
+          type: string
+          minLength: 32
+          description: Secret key for JWT signing
+          example: "your-super-secret-jwt-key-32-chars"
+        algorithm:
+          type: string
+          enum: [HS256, HS384, HS512, RS256, RS384, RS512]
+          description: JWT signing algorithm
+          default: "HS256"
+          example: "HS256"
+        audience:
+          type: string
+          description: Expected token audience
+          example: "todo-evolution-api"
+        issuer:
+          type: string
+          description: Expected token issuer
+          example: "todo-evolution-auth"
+        cookie_name:
+          type: string
+          description: Cookie name for token (alternative to header)
+          example: "auth_token"
+        header_name:
+          type: string
+          description: HTTP header name for token
+          default: "Authorization"
+          example: "Authorization"
+        header_scheme:
+          type: string
+          description: Authorization header scheme
+          default: "Bearer"
+          example: "Bearer"
+        token_expiration:
+          type: integer
+          description: Default token expiration in seconds
+          default: 3600
+          example: 3600
+        refresh_expiration:
+          type: integer
+          description: Refresh token expiration in seconds
+          default: 86400
+          example: 86400
+      required:
+        - secret_key
+
+    # Request/Response Headers
+    AuthorizationHeader:
+      type: string
+      description: Authorization header for bearer token authentication
+      example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      pattern: "^Bearer [A-Za-z0-9-_=]+$"
+
+    WWWAuthenticateHeader:
+      type: string
+      description: WWW-Authenticate header for 401 responses
+      example: "Bearer realm=\"Todo Evolution API\""
+      pattern: "^Bearer realm=\"[^\"]+\""
+
+    CorrelationIDHeader:
+      type: string
+      description: Request correlation ID for tracing
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+    XProcessingTimeHeader:
+      type: string
+      description: Request processing time in milliseconds
+      example: "2.5"
+
+    XRateLimitRemainingHeader:
+      type: string
+      description: Remaining requests in rate limit window
+      example: "55"
+
+    XRateLimitResetHeader:
+      type: string
+      description: Unix timestamp when rate limit resets
+      example: "1640995200"
+
+  # Security Scheme
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Authentication
+
+  # Example Objects
+  examples:
+    AuthenticationSuccess:
+      summary: Successful authentication response
+      description: Example of successful authentication with user context
+      value:
+        user_id: "user_12345"
+        email: "user@example.com"
+        expires_at: "2025-01-14T10:30:00Z"
+        roles: ["user"]
+        permissions: ["read:tasks", "write:tasks"]
+
+    AuthenticationFailure:
+      summary: Authentication failure response
+      description: Example of failed authentication error response
+      value:
+        detail: "Authentication required - Bearer token missing"
+        error_code: "AUTHENTICATION_REQUIRED"
+        correlation_id: "550e8400-e29b-41d4-a716-446655440000"
+        timestamp: "2025-01-13T15:30:00Z"
+        path: "/api/protected-endpoint"
+        method: "GET"
+
+    TokenExpired:
+      summary: Expired token response
+      description: Example of expired token error response
+      value:
+        detail: "Authentication token has expired"
+        error_code: "EXPIRED_TOKEN"
+        correlation_id: "550e8400-e29b-41d4-a716-446655440000"
+        timestamp: "2025-01-13T15:30:00Z"
+        expired_at: "2025-01-13T15:00:00Z"
+        refresh_hint: "Please refresh your authentication token"
+
+# Tags
+tags:
+  - name: Authentication
+    description: JWT authentication middleware operations
+  - name: Security
+    description: Security events and monitoring
+  - name: Errors
+    description: Error response schemas
+  - name: Configuration
+    description: Middleware configuration

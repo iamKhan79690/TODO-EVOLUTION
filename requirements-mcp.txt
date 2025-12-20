@@ -1,0 +1,39 @@
+# MCP Server Dependencies for TODO-Evolution Phase III
+
+# Core MCP Framework
+mcp>=1.0.0
+fastmcp>=0.1.0
+
+# Database and ORM
+sqlmodel>=0.0.14
+asyncpg>=0.29.0
+psycopg2-binary>=2.9.7
+
+# Authentication and Security
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Performance and Monitoring
+psutil>=5.9.6
+structlog>=23.2.0
+
+# Development and Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+mcp-inspector>=0.1.0
+
+# Code Quality
+black>=23.9.0
+ruff>=0.1.0
+mypy>=1.6.0
+  
+# Production Server
+uvicorn[standard]>=0.23.0
+gunicorn>=21.2.0
+
+# Optional Caching (for production)
+redis[hiredis]>=5.0.0
+
+# Environment Management
+python-dotenv>=1.0.0

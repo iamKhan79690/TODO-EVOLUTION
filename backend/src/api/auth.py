@@ -39,14 +39,29 @@ router = APIRouter(
 security = HTTPBearer()
 
 
+def _truncate_password(password: str) -> str:
+    """Truncate password to 72 bytes for bcrypt compatibility.
+    
+    Bcrypt only uses the first 72 bytes of a password. Newer versions (4.1.0+)
+    enforce this limit strictly and raise an error for longer passwords.
+    """
+    # Encode to bytes, truncate, then decode back to string
+    password_bytes = password.encode('utf-8')[:72]
+    return password_bytes.decode('utf-8', errors='ignore')
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    # Truncate password to 72 bytes for bcrypt compatibility
+    truncated_password = _truncate_password(plain_password)
+    return pwd_context.verify(truncated_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
     """Generate password hash."""
-    return pwd_context.hash(password)
+    # Truncate password to 72 bytes for bcrypt compatibility
+    truncated_password = _truncate_password(password)
+    return pwd_context.hash(truncated_password)
 
 
 @router.post("/sign-up", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
@@ -158,9 +173,12 @@ async def sign_in(
                 detail="Invalid email or password"
             )
 
-        # In a real implementation, you'd verify the password hash
-        # For now, we'll simulate successful authentication
-        # TODO: Implement proper password verification with Better Auth
+        # Verify password hash
+        if not verify_password(credentials.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
 
         # Create JWT tokens
         access_token = create_access_token(user.id, user.email)

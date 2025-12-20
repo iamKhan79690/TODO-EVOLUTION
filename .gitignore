@@ -18,6 +18,32 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Agent specific
+.env.development
+.env.test
+.env.production
+*.key
+*.pem
+*.crt
+
+# OpenAI API
+openai_api_key.txt
+openai_key.txt
+
+# Agent logs and data
+logs/
+agent_data/
+conversation_storage/
+*.log
+
+# Agent virtual environments
+.venv-agent/
+venv-agent/
+
+# Agent configuration
+agent_config.local.json
+agent_settings.local.yaml
 MANIFEST
 .pytest_cache/
 .coverage
@@ -30,8 +56,6 @@ htmlcov/
 uv.lock
 
 # Virtual Environment
-.env
-.env.example
 venv/
 env/
 ENV/
@@ -61,6 +85,8 @@ out/
 .parcel-cache/
 
 # Environment variables
+.env
+.env.*
 .env.local
 .env.development.local
 .env.test.local
@@ -77,3 +103,5 @@ Thumbs.db
 # Frontend specific
 .eslintcache
 .vercel
+nul
+**/nul

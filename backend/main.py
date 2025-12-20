@@ -10,6 +10,8 @@ from src.core.config import settings
 from src.api.health import health_router
 from src.api.tasks import tasks_router
 from src.api.auth import router as auth_router
+from src.api.chat import router as chat_router
+from src.api.simple_chat import router as simple_chat_router
 from src.core.database import create_tables, validate_database_connection
 from src.auth.token_store import token_blacklist
 
@@ -67,6 +69,8 @@ app.add_middleware(
 app.include_router(health_router, prefix="/api/v1", tags=["health"])
 app.include_router(tasks_router, prefix="/api", tags=["tasks"])
 app.include_router(auth_router, prefix="/api/v1", tags=["authentication"])
+app.include_router(chat_router, tags=["chat"])
+app.include_router(simple_chat_router, tags=["simple-chat"])
 
 
 @app.get("/")

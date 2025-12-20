@@ -4,12 +4,22 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { User, AuthState } from './types';
 import authClient from './auth-client';
 
-interface AuthContextType extends AuthState {
+interface AuthContextType {
+  // State
+  user: User | null;
+  status: 'idle' | 'loading' | 'authenticated' | 'unauthenticated' | 'error';
+  error: string | null;
+  accessToken?: string;
+  // Methods
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string) => Promise<void>; // Alias for register
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<User>;
-  refreshToken: () => Promise<void>;
+  refreshSession: () => Promise<void>;
+  // Computed
+  isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -185,12 +195,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const value: AuthContextType = {
-    ...authState,
+    user: authState.user,
+    status: authState.status,
+    error: authState.error,
+    accessToken: authState.accessToken,
     login,
     register,
+    signUp: register, // Alias for components using signUp name
     logout,
     updateProfile,
-    refreshToken,
+    refreshSession: refreshToken,
+    isAuthenticated: authState.status === 'authenticated',
+    isLoading: authState.status === 'loading',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

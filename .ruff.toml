@@ -1,0 +1,30 @@
+# Ruff configuration for OpenAI Agent project
+
+[tool.ruff]
+# Show the source code location
+line-length = 88
+# Include project directory in path
+include = ["src/**"]
+
+[tool.ruff.lint]
+# Enable pycodestyle (E) and pyflakes (F) by default
+select = ["E4", "E7", "E9", "F", "W", "B", "I", "C90", "N", "UP"]
+ignore = [
+    "E501",  # Line too long (handled by black)
+    "B008",   # Do not perform function calls in argument defaults
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can have longer lines
+"tests/**" = ["E501", "B008"]
+
+[tool.ruff.format]
+# Use double quotes
+quote-style = "double"
+# Indent with 4 spaces
+indent-style = "space"
+# Respect magic trailing commas
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]

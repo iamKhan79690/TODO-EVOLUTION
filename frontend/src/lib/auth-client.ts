@@ -15,7 +15,7 @@ export class AuthClient {
 
   private constructor() {
     this.storage = typeof window !== 'undefined' ? localStorage : ({} as Storage);
-    this.baseURL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://localhost:8001';
+    this.baseURL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://localhost:8000';
   }
 
   public static getInstance(): AuthClient {
