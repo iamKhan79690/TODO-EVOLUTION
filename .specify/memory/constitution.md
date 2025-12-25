@@ -486,3 +486,561 @@ This constitution governs Phase II implementation. Deviations require explicit j
 
 *"Clear specs, clean code, confident deployment."*  
 — Phase II Mantra
+
+
+
+# Phase IV: Local Kubernetes Deployment Constitution
+## Hackathon II - Cloud Native Architecture
+
+## Core Principles
+
+### I. Infrastructure as Code (IaC) - Spec-Driven Deployment
+All infrastructure components MUST originate from specifications before implementation. Use GitHub Spec-Kit Plus for infrastructure specification management.
+
+**Workflow**: infrastructure-spec → containerization → helm-charts → deployment → validation
+
+**Non-Negotiable Rules**:
+- No manual YAML writing - use kubectl-ai/kagent to generate manifests
+- No manual Dockerfile writing - use Gordon (Docker AI) to generate containers
+- All infrastructure changes documented in `/specs/infrastructure/`
+- Every deployment decision recorded in ADR (Architecture Decision Record)
+
+### II. Containerization Standards (Docker + Gordon)
+
+**Container Requirements**:
+- **Multi-stage builds**: Minimize image size, separate build from runtime
+- **Security hardening**: Non-root user (appuser), read-only root filesystem where possible
+- **Image tagging**: Use semantic versioning (v1.0.0), never use `latest` tag
+- **Base images**: Use official, minimal base images (node:20-alpine, python:3.13-slim)
+
+**Services to Containerize**:
+1. **Frontend (Next.js)**: Port 3000, standalone output mode
+2. **Backend (FastAPI)**: Port 8000, uvicorn server
+3. **MCP Server**: Port 8001, Python service
+
+**Docker AI (Gordon) Usage**:
+```bash
+# Navigate to service directory, then:
+docker ai "Create a production-ready multi-stage Dockerfile for this [Next.js/FastAPI/Python] service with security best practices"
+```
+
+**Dockerfile Requirements**:
+- Stage 1: Dependencies installation
+- Stage 2: Build artifacts
+- Stage 3: Runtime with minimal footprint
+- USER appuser (non-root)
+- HEALTHCHECK directive included
+- Explicit EXPOSE ports
+- ENV variables for configuration
+
+### III. Kubernetes Architecture (Minikube + Helm)
+
+**Orchestration Stack**:
+- **Local Cluster**: Minikube (single-node Kubernetes)
+- **Package Manager**: Helm 3.x (chart-based deployment)
+- **AI Operations**: kubectl-ai for manifest generation, kagent for cluster management
+
+**Deployment Blueprint**:
+
+| Service | Replicas | Port | Service Type | Health Probes |
+|---------|----------|------|--------------|---------------|
+| Frontend | 2 | 3000 | LoadBalancer | readiness + liveness |
+| Backend | 2 | 8000 | ClusterIP | readiness + liveness |
+| MCP Server | 1 | 8001 | ClusterIP | readiness + liveness |
+
+**Resource Allocation Standards**:
+- **Requests**: Minimum guaranteed resources (CPU: 100m, Memory: 128Mi)
+- **Limits**: Maximum allowed resources (CPU: 500m, Memory: 512Mi)
+- **Ratio**: Requests at 50% of Limits for optimal scheduling
+
+### IV. Helm Chart Structure (AI-Generated)
+
+**Chart Organization**:
+```
+todo-evolution-chart/
+├── Chart.yaml              # Chart metadata
+├── values.yaml             # Default configuration values
+├── templates/
+│   ├── frontend-deployment.yaml
+│   ├── frontend-service.yaml
+│   ├── backend-deployment.yaml
+│   ├── backend-service.yaml
+│   ├── mcp-deployment.yaml
+│   ├── mcp-service.yaml
+│   ├── configmap.yaml      # Non-sensitive config
+│   ├── secrets.yaml        # Sensitive credentials
+│   └── ingress.yaml        # Optional: Load balancing rules
+```
+
+**Values.yaml Requirements**:
+- Image repositories and tags for all services
+- Replica counts (configurable per environment)
+- Resource limits/requests
+- Environment variables (DATABASE_URL, API keys via secrets)
+- Service ports and types
+
+**Generation Command** (kubectl-ai):
+```bash
+kubectl-ai "Generate a Helm chart for a todo app with frontend (Next.js), backend (FastAPI), and mcp-server deployments. Include services, configmaps, and secrets."
+```
+
+### V. Security & Hardening (Zero-Trust Architecture)
+
+**Pod Security Standards** (Mandatory):
+```yaml
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true  # Where possible
+  capabilities:
+    drop:
+      - ALL
+```
+
+**Secret Management**:
+- Never commit secrets to git (use `.gitignore` for secrets.yaml)
+- Use Kubernetes Secrets for sensitive data (DATABASE_URL, JWT_SECRET, OPENAI_API_KEY)
+- Secrets mounted as environment variables or volume mounts
+- Base64 encoding in secrets.yaml (NOT encryption - Minikube doesn't have KMS)
+
+**RBAC (Role-Based Access Control)**:
+- Create dedicated ServiceAccount for each deployment
+- Apply "Least Privilege" principle (minimal permissions)
+- No use of default ServiceAccount
+
+**Network Policies** (Optional for Phase IV, Recommended):
+- Restrict pod-to-pod communication
+- Allow only necessary ingress/egress traffic
+
+### VI. High Availability & Resilience
+
+**Health Probes** (Non-Negotiable):
+```yaml
+# Liveness Probe: Restart pod if app crashes
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Readiness Probe: Remove pod from service if not ready
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 2
+```
+
+**Update Strategy**:
+```yaml
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1    # At most 1 pod down during update
+    maxSurge: 1          # At most 1 extra pod during update
+```
+
+**Graceful Shutdown**:
+- `terminationGracePeriodSeconds: 60` for stateful services
+- Apps must handle SIGTERM signal for clean shutdown
+
+**Anti-Affinity** (Multi-replica deployments):
+```yaml
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - frontend
+          topologyKey: kubernetes.io/hostname
+```
+
+### VII. Observability & Monitoring
+
+**Standard Labels** (Kubernetes Recommended):
+```yaml
+metadata:
+  labels:
+    app.kubernetes.io/name: todo-frontend
+    app.kubernetes.io/instance: todo-prod
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: todo-evolution
+    app.kubernetes.io/managed-by: helm
+```
+
+**Logging Standards**:
+- Structured logging (JSON format) for backend services
+- Log to stdout/stderr (Kubernetes collects automatically)
+- Log levels: DEBUG (dev), INFO (prod), ERROR (always)
+
+**Metrics Endpoints** (Phase V, but prepare now):
+- `/metrics` endpoint for Prometheus scraping
+- Basic metrics: request count, latency, error rate
+
+### VIII. Configuration Management
+
+**ConfigMaps** (Non-sensitive configuration):
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: todo-config
+data:
+  API_BASE_URL: "http://backend-service:8000"
+  LOG_LEVEL: "INFO"
+  ENVIRONMENT: "development"
+```
+
+**Secrets** (Sensitive credentials):
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: todo-secrets
+type: Opaque
+data:
+  DATABASE_URL: <base64-encoded>
+  JWT_SECRET: <base64-encoded>
+  OPENAI_API_KEY: <base64-encoded>
+```
+
+**Environment Variables Injection**:
+```yaml
+env:
+  - name: DATABASE_URL
+    valueFrom:
+      secretKeyRef:
+        name: todo-secrets
+        key: DATABASE_URL
+  - name: API_BASE_URL
+    valueFrom:
+      configMapKeyRef:
+        name: todo-config
+        key: API_BASE_URL
+```
+
+### IX. Minikube Local Development
+
+**Minikube Setup**:
+```bash
+# Start Minikube with sufficient resources
+minikube start --cpus=4 --memory=8192 --disk-size=20g
+
+# Enable addons
+minikube addons enable ingress
+minikube addons enable metrics-server
+minikube addons enable dashboard
+
+# Point Docker CLI to Minikube's Docker daemon
+eval $(minikube docker-env)
+```
+
+**Docker Image Strategy**:
+- Build images inside Minikube's Docker daemon (no push to registry needed)
+- Use `imagePullPolicy: IfNotPresent` in deployments
+- Tag images with version numbers (e.g., `todo-frontend:1.0.0`)
+
+**Service Access**:
+- LoadBalancer services exposed via `minikube service <service-name>`
+- NodePort services accessible at `<minikube-ip>:<node-port>`
+- Ingress accessible at `<minikube-ip>` (if ingress enabled)
+
+### X. AI-Assisted Operations (AIOps)
+
+**Gordon (Docker AI)** - Containerization Assistant:
+```bash
+# Check Gordon capabilities
+docker ai "What can you do?"
+
+# Generate Dockerfiles
+docker ai "Create a production-ready Dockerfile for this Next.js app"
+
+# Optimize existing Dockerfile
+docker ai "Optimize this Dockerfile for security and size"
+
+# Troubleshoot build issues
+docker ai "Why is my Docker build failing?"
+```
+
+**kubectl-ai** - Kubernetes Manifest Generator:
+```bash
+# Generate deployments
+kubectl-ai "Deploy the todo frontend with 2 replicas and resource limits"
+
+# Scale services
+kubectl-ai "Scale the backend deployment to 3 replicas"
+
+# Troubleshoot pods
+kubectl-ai "Check why the backend pods are in CrashLoopBackOff"
+
+# Generate services
+kubectl-ai "Create a LoadBalancer service for the frontend on port 3000"
+```
+
+**kagent** - Cluster Management AI:
+```bash
+# Cluster health analysis
+kagent "Analyze the cluster health and resource utilization"
+
+# Optimization recommendations
+kagent "Suggest optimizations for resource allocation"
+
+# Debugging assistance
+kagent "Investigate why the backend service is not reachable"
+```
+
+### XI. Deployment Workflow (Spec-Driven)
+
+**Phase IV Implementation Pipeline**:
+
+1. **Specification Stage**:
+   - Write infrastructure specifications in `/specs/infrastructure/`
+   - Define deployment requirements, resource needs, security policies
+   - Create ADRs for major infrastructure decisions
+
+2. **Containerization Stage**:
+   - Use Gordon to generate Dockerfiles for each service
+   - Build Docker images inside Minikube's Docker daemon
+   - Test containers locally with `docker run`
+
+3. **Helm Chart Generation Stage**:
+   - Use kubectl-ai to generate Helm chart structure
+   - Customize `values.yaml` with project-specific configuration
+   - Validate Helm chart with `helm lint`
+
+4. **Deployment Stage**:
+   - Install Helm chart: `helm install todo-evolution ./todo-chart`
+   - Verify deployments: `kubectl get pods,services,deployments`
+   - Access services: `minikube service frontend-service`
+
+5. **Validation Stage**:
+   - Health checks passing: `kubectl get pods` (all Running)
+   - Services reachable: `curl <service-url>/health`
+   - Application functional: Test via browser/Postman
+   - Logs clean: `kubectl logs <pod-name>`
+
+### XII. Testing & Validation (Phase IV Scope)
+
+**Container Testing**:
+- [ ] Dockerfile builds without errors
+- [ ] Container starts successfully: `docker run -p <port>:<port> <image>`
+- [ ] Health endpoint responds: `curl http://localhost:<port>/health`
+- [ ] Non-root user verified: `docker run <image> whoami` (should not be root)
+
+**Kubernetes Deployment Testing**:
+- [ ] Helm chart deploys without errors: `helm install --dry-run --debug`
+- [ ] All pods reach Running state: `kubectl get pods`
+- [ ] Services created correctly: `kubectl get services`
+- [ ] Health probes working: `kubectl describe pod <pod-name>`
+- [ ] Resource limits applied: `kubectl describe pod <pod-name>` (check resources)
+
+**Integration Testing**:
+- [ ] Frontend can reach Backend: Check network connectivity
+- [ ] Backend can reach Database: Verify DATABASE_URL connection
+- [ ] MCP Server accessible from Backend: Test inter-service communication
+- [ ] Authentication working: Test JWT flow end-to-end
+- [ ] CRUD operations functional: Create, read, update, delete tasks
+
+**Security Testing**:
+- [ ] Pods running as non-root: `kubectl exec <pod> -- id`
+- [ ] Secrets mounted correctly: `kubectl exec <pod> -- env | grep SECRET`
+- [ ] No sensitive data in logs: `kubectl logs <pod> | grep -i password`
+
+### XIII. Troubleshooting & Debugging
+
+**Common Issues & Solutions**:
+
+| Issue | Diagnosis Command | Solution |
+|-------|------------------|----------|
+| ImagePullBackOff | `kubectl describe pod <pod>` | Check image name, ensure image exists in Minikube Docker |
+| CrashLoopBackOff | `kubectl logs <pod>` | Check application logs, verify environment variables |
+| Pending Pod | `kubectl describe pod <pod>` | Check resource availability, node capacity |
+| Service Unreachable | `kubectl get endpoints <service>` | Verify pod labels match service selector |
+| 401 Unauthorized | Check backend logs | Verify JWT_SECRET matches between frontend/backend |
+
+**Debugging Commands**:
+```bash
+# Check pod status
+kubectl get pods -o wide
+
+# View pod logs
+kubectl logs <pod-name> --tail=100 --follow
+
+# Describe pod (events, conditions)
+kubectl describe pod <pod-name>
+
+# Execute commands in pod
+kubectl exec -it <pod-name> -- /bin/sh
+
+# Port forward for local testing
+kubectl port-forward <pod-name> 8000:8000
+
+# Check service endpoints
+kubectl get endpoints <service-name>
+
+# View cluster events
+kubectl get events --sort-by='.lastTimestamp'
+```
+
+### XIV. Documentation Requirements
+
+**README.md Updates** (Phase IV Section):
+```markdown
+## Phase IV: Kubernetes Deployment
+
+### Prerequisites
+- Docker Desktop with Gordon enabled
+- Minikube installed
+- kubectl and Helm installed
+- kubectl-ai and kagent installed
+
+### Setup Minikube Cluster
+1. Start Minikube: `minikube start --cpus=4 --memory=8192`
+2. Enable addons: `minikube addons enable ingress metrics-server`
+3. Point Docker to Minikube: `eval $(minikube docker-env)`
+
+### Build Docker Images
+1. Navigate to each service directory
+2. Use Gordon to generate Dockerfiles (or use existing)
+3. Build images: `docker build -t todo-frontend:1.0.0 ./frontend`
+
+### Deploy with Helm
+1. Navigate to Helm chart directory
+2. Install chart: `helm install todo-evolution ./todo-chart`
+3. Verify deployment: `kubectl get pods,services`
+
+### Access Application
+1. Frontend: `minikube service frontend-service --url`
+2. Backend: `minikube service backend-service --url`
+3. Dashboard: `minikube dashboard`
+
+### Troubleshooting
+- Check pod status: `kubectl get pods`
+- View logs: `kubectl logs <pod-name>`
+- Describe pod: `kubectl describe pod <pod-name>`
+```
+
+**Specification Files Required**:
+- `/specs/infrastructure/phase-iv-overview.md`: High-level architecture
+- `/specs/infrastructure/containerization.md`: Dockerfile specifications
+- `/specs/infrastructure/kubernetes-deployment.md`: K8s resource specs
+- `/specs/infrastructure/helm-chart.md`: Helm values and structure
+
+### XV. Success Metrics & Evaluation Criteria
+
+**Phase IV Success = 250 Points**:
+
+**Infrastructure Implementation (150 points)**:
+- [ ] All three services containerized with multi-stage Dockerfiles (30 points)
+- [ ] Non-root user security implemented (20 points)
+- [ ] Helm chart created with proper structure (30 points)
+- [ ] Deployed to Minikube successfully (30 points)
+- [ ] Health probes configured and working (20 points)
+- [ ] Resource limits/requests defined (20 points)
+
+**AI Operations (50 points)**:
+- [ ] Gordon used for Dockerfile generation (15 points)
+- [ ] kubectl-ai used for manifest generation (15 points)
+- [ ] kagent used for cluster management (10 points)
+- [ ] AI-assisted debugging demonstrated (10 points)
+
+**Documentation & Submission (50 points)**:
+- [ ] Updated README with Minikube setup instructions (15 points)
+- [ ] Infrastructure specs in `/specs/infrastructure/` (15 points)
+- [ ] Demo video showing K8s deployment (15 points)
+- [ ] Clear evidence of spec-driven approach (5 points)
+
+### XVI. Timeline & Milestones (Dec 21 - Jan 4)
+
+**Week 1 (Dec 21-27)**:
+- **Dec 21-22**: Write infrastructure specifications, study Kubernetes basics
+- **Dec 23-24**: Containerize services with Gordon, test locally
+- **Dec 25-26**: Generate Helm charts with kubectl-ai, customize values
+- **Dec 27**: Deploy to Minikube, troubleshoot issues
+
+**Week 2 (Dec 28 - Jan 4)**:
+- **Dec 28-29**: Implement health probes, resource limits
+- **Dec 30-31**: Security hardening (non-root, secrets)
+- **Jan 1-2**: Integration testing, debugging with kagent
+- **Jan 3**: Documentation, demo video recording
+- **Jan 4**: Phase IV submission deadline (11:59 PM)
+
+### XVII. Non-Goals (Phase IV Scope)
+
+**Explicitly Excluded**:
+- ❌ Production cloud deployment (DigitalOcean DOKS) → Phase V
+- ❌ Kafka/Dapr event-driven architecture → Phase V
+- ❌ CI/CD pipelines (GitHub Actions) → Phase V
+- ❌ Prometheus/Grafana monitoring → Phase V
+- ❌ Horizontal Pod Autoscaling (HPA) → Phase V
+- ❌ Persistent volumes (StatefulSets) → Acceptable but not required
+- ❌ Ingress controllers (beyond basic Minikube ingress) → Phase V
+
+**In-Scope but Optional**:
+- ✅ Basic ingress for frontend access (nice-to-have)
+- ✅ ConfigMaps for environment-specific config (recommended)
+- ✅ Network policies (bonus points)
+- ✅ Resource quotas (advanced, bonus points)
+
+### XVIII. Emergency Protocols (Phase IV Specific)
+
+**If Gordon Not Available**:
+- Write Dockerfiles manually following multi-stage pattern
+- Use existing Dockerfile templates from open-source projects
+- Document in ADR: "Why manual Dockerfile creation was necessary"
+
+**If kubectl-ai/kagent Not Working**:
+- Generate Helm charts manually using `helm create` command
+- Use Kubernetes official documentation for YAML structure
+- Document in ADR: "Fallback to manual Helm chart creation"
+
+**If Minikube Resource Issues**:
+- Reduce replica counts (frontend: 1, backend: 1)
+- Lower resource limits (CPU: 250m, Memory: 256Mi)
+- Use `minikube start --cpus=2 --memory=4096` (minimum viable)
+
+**If Deployment Fails**:
+1. Check Minikube status: `minikube status`
+2. Check pod events: `kubectl describe pod <pod-name>`
+3. Check logs: `kubectl logs <pod-name>`
+4. Use kubectl-ai: "Why is my deployment failing?"
+5. Rollback: `helm rollback todo-evolution`
+
+---
+
+## Constitution Ratification
+
+**Version**: 4.0.0  
+**Ratified**: December 20, 2025  
+**Scope**: Phase IV - Local Kubernetes Deployment (Hackathon II)  
+**Deadline**: Sunday, January 4, 2026, 11:59 PM  
+**Points**: 250 (base) + up to 200 (bonuses for Reusable Intelligence/Blueprints)
+
+**Key Technologies**:
+- Docker + Gordon (Container AI)
+- Minikube (Local Kubernetes)
+- Helm 3.x (Package Manager)
+- kubectl-ai + kagent (AIOps)
+
+**Deployment Target**: Local Minikube cluster (single-node)
+
+**Next Phase Preview**: Phase V will extend this to DigitalOcean DOKS (cloud), add Kafka/Dapr for event-driven architecture, implement CI/CD, and add advanced monitoring.
+
+---
+
+*"From code to containers to clusters - the cloud-native journey."*  
+— Phase IV Mantra

@@ -6,6 +6,8 @@ for Phase III AI Chatbot functionality.
 """
 
 import os
+import signal
+import sys
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -112,6 +114,16 @@ async def app_info():
         }
     }
 
+def signal_handler(signum, frame):
+    """Handle graceful shutdown signals"""
+    print(f"\n🛑 Received signal {signum}. Shutting down gracefully...")
+    sys.exit(0)
+
+# Register signal handlers for graceful shutdown
+signal.signal(signal.SIGTERM, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)
+
+
 if __name__ == "__main__":
     import uvicorn
 
@@ -123,9 +135,10 @@ if __name__ == "__main__":
     print(f"📖 API Docs: http://{HOST}:{PORT}/docs" if DEBUG else "📖 API Docs: Disabled")
 
     uvicorn.run(
-        "main:app",
+        "src.main:app",
         host=HOST,
         port=PORT,
         reload=DEBUG,
         log_level="debug" if DEBUG else "info",
+        access_log=True,
     )

@@ -56,7 +56,7 @@ export default function TaskForm({
     watch,
     reset,
   } = useForm<TaskFormData>({
-    resolver: zodResolver(taskSchema),
+    resolver: zodResolver(taskSchema as any),
     defaultValues: {
       title: task?.title || '',
       description: task?.description || '',

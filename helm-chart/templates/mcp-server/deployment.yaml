@@ -1,0 +1,81 @@
+{{- if .Values.mcpServer.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-evolution-mcp-server
+  labels:
+    {{- include "todo-evolution.labels" . | nindent 4 }}
+    component: mcp-server
+spec:
+  replicas: {{ .Values.mcpServer.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      {{- include "todo-evolution.selectorLabels" (dict "Values" .Values "Component" "mcp-server") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "todo-evolution.selectorLabels" (dict "Values" .Values "Component" "mcp-server") | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.mcpServer.podSecurityContext | nindent 8 }}
+      serviceAccountName: todo-evolution-mcp-server
+      containers:
+      - name: mcp-server
+        image: "{{ .Values.mcpServer.image.repository }}:{{ .Values.mcpServer.image.tag }}"
+        imagePullPolicy: {{ .Values.mcpServer.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: 8001
+          protocol: TCP
+        env:
+        - name: HOST
+          value: {{ .Values.mcpServer.env.HOST | quote }}
+        - name: PORT
+          value: {{ .Values.mcpServer.env.PORT | quote }}
+        - name: MCP_HTTP_PORT
+          value: {{ .Values.mcpServer.env.MCP_HTTP_PORT | quote }}
+        - name: LOG_LEVEL
+          value: {{ .Values.mcpServer.env.LOG_LEVEL | quote }}
+        - name: PYTHONPATH
+          value: {{ .Values.mcpServer.env.PYTHONPATH | quote }}
+        - name: BACKEND_URL
+          value: {{ .Values.mcpServer.env.BACKEND_URL | quote }}
+        {{- range .Values.mcpServer.secretRefs }}
+        - name: {{ .name }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .secretKeyRef.name }}
+              key: {{ .secretKeyRef.key }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.mcpServer.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.mcpServer.probes.liveness.path }}
+            port: http
+          initialDelaySeconds: {{ .Values.mcpServer.probes.liveness.initialDelaySeconds }}
+          periodSeconds: {{ .Values.mcpServer.probes.liveness.periodSeconds }}
+          timeoutSeconds: {{ .Values.mcpServer.probes.liveness.timeoutSeconds }}
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.mcpServer.probes.readiness.path }}
+            port: http
+          initialDelaySeconds: {{ .Values.mcpServer.probes.readiness.initialDelaySeconds }}
+          periodSeconds: {{ .Values.mcpServer.probes.readiness.periodSeconds }}
+          timeoutSeconds: {{ .Values.mcpServer.probes.readiness.timeoutSeconds }}
+          successThreshold: 1
+          failureThreshold: 3
+        securityContext:
+          {{- toYaml .Values.mcpServer.securityContext | nindent 12 }}
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+{{- end }}

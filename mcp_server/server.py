@@ -71,25 +71,31 @@ async def health():
     return {"status": "healthy", "service": "MCP Task Server", "version": "1.0.0"}
 
 
+# Get backend URL from environment
+def get_backend_url():
+    return os.getenv("BACKEND_URL", "http://todo-evolution-backend:8000")
+
+
 # Tool endpoints
 @app.post("/tools/add_task", response_model=ToolResponse)
 async def add_task(request: AddTaskRequest):
     """Add a new task via MCP tool."""
     try:
-        # Import here to avoid circular imports
         import httpx
-        
-        async with httpx.AsyncClient() as client:
+
+        backend_url = get_backend_url()
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
-                "http://localhost:8000/api/v1/tasks",
+                f"{backend_url}/api/tasks",
                 json={
                     "title": request.title,
                     "description": request.description
                 },
                 headers={"Authorization": f"Bearer {request.jwt_token}"}
             )
-            
-            if response.status_code == 200:
+
+            if response.status_code in [200, 201]:
                 task_data = response.json()
                 return ToolResponse(
                     success=True,
@@ -97,8 +103,8 @@ async def add_task(request: AddTaskRequest):
                     message=f"Task '{request.title}' created successfully"
                 )
             else:
-                return ToolResponse(success=False, error=f"HTTP {response.status_code}")
-                
+                return ToolResponse(success=False, error=f"HTTP {response.status_code}: {response.text[:200]}")
+
     except Exception as e:
         return ToolResponse(success=False, error=str(e))
 
@@ -108,30 +114,33 @@ async def list_tasks(request: ListTasksRequest):
     """List tasks via MCP tool."""
     try:
         import httpx
-        
-        async with httpx.AsyncClient() as client:
+
+        backend_url = get_backend_url()
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(
-                "http://localhost:8000/api/v1/tasks",
+                f"{backend_url}/api/tasks",
                 headers={"Authorization": f"Bearer {request.jwt_token}"}
             )
-            
+
             if response.status_code == 200:
-                tasks = response.json()
-                
+                tasks_data = response.json()
+                tasks = tasks_data.get("tasks", [])
+
                 # Filter by status if needed
                 if request.status == "completed":
                     tasks = [t for t in tasks if t.get("is_completed")]
                 elif request.status == "pending":
                     tasks = [t for t in tasks if not t.get("is_completed")]
-                
+
                 return ToolResponse(
                     success=True,
                     data={"tasks": tasks, "count": len(tasks)},
                     message=f"Found {len(tasks)} tasks"
                 )
             else:
-                return ToolResponse(success=False, error=f"HTTP {response.status_code}")
-                
+                return ToolResponse(success=False, error=f"HTTP {response.status_code}: {response.text[:200]}")
+
     except Exception as e:
         return ToolResponse(success=False, error=str(e))
 
@@ -141,14 +150,15 @@ async def complete_task(request: TaskOperationRequest):
     """Mark a task as complete via MCP tool."""
     try:
         import httpx
-        
-        async with httpx.AsyncClient() as client:
+
+        backend_url = get_backend_url()
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.patch(
-                f"http://localhost:8000/api/v1/tasks/{request.task_id}",
-                json={"is_completed": True},
+                f"{backend_url}/api/tasks/{request.task_id}/complete",
                 headers={"Authorization": f"Bearer {request.jwt_token}"}
             )
-            
+
             if response.status_code == 200:
                 return ToolResponse(
                     success=True,
@@ -156,8 +166,8 @@ async def complete_task(request: TaskOperationRequest):
                     message=f"Task {request.task_id} marked as complete"
                 )
             else:
-                return ToolResponse(success=False, error=f"HTTP {response.status_code}")
-                
+                return ToolResponse(success=False, error=f"HTTP {response.status_code}: {response.text[:200]}")
+
     except Exception as e:
         return ToolResponse(success=False, error=str(e))
 
@@ -167,13 +177,15 @@ async def delete_task(request: TaskOperationRequest):
     """Delete a task via MCP tool."""
     try:
         import httpx
-        
-        async with httpx.AsyncClient() as client:
+
+        backend_url = get_backend_url()
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.delete(
-                f"http://localhost:8000/api/v1/tasks/{request.task_id}",
+                f"{backend_url}/api/tasks/{request.task_id}",
                 headers={"Authorization": f"Bearer {request.jwt_token}"}
             )
-            
+
             if response.status_code in [200, 204]:
                 return ToolResponse(
                     success=True,
@@ -181,8 +193,8 @@ async def delete_task(request: TaskOperationRequest):
                     message=f"Task {request.task_id} deleted"
                 )
             else:
-                return ToolResponse(success=False, error=f"HTTP {response.status_code}")
-                
+                return ToolResponse(success=False, error=f"HTTP {response.status_code}: {response.text[:200]}")
+
     except Exception as e:
         return ToolResponse(success=False, error=str(e))
 
@@ -192,20 +204,22 @@ async def update_task(request: UpdateTaskRequest):
     """Update a task via MCP tool."""
     try:
         import httpx
-        
+
+        backend_url = get_backend_url()
+
         update_data = {}
         if request.title:
             update_data["title"] = request.title
         if request.description:
             update_data["description"] = request.description
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.patch(
-                f"http://localhost:8000/api/v1/tasks/{request.task_id}",
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.put(
+                f"{backend_url}/api/tasks/{request.task_id}",
                 json=update_data,
                 headers={"Authorization": f"Bearer {request.jwt_token}"}
             )
-            
+
             if response.status_code == 200:
                 return ToolResponse(
                     success=True,
@@ -213,8 +227,8 @@ async def update_task(request: UpdateTaskRequest):
                     message=f"Task {request.task_id} updated"
                 )
             else:
-                return ToolResponse(success=False, error=f"HTTP {response.status_code}")
-                
+                return ToolResponse(success=False, error=f"HTTP {response.status_code}: {response.text[:200]}")
+
     except Exception as e:
         return ToolResponse(success=False, error=str(e))
 

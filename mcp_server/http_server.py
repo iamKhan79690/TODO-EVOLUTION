@@ -12,6 +12,7 @@ Runs on port 8001 and provides endpoints for:
 
 import os
 import sys
+import signal
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Any, List
@@ -362,6 +363,36 @@ async def health_check():
     }
 
 
+@app.get("/ready")
+async def readiness_check():
+    """Readiness check endpoint."""
+    try:
+        # Check if we can connect to the backend
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(f"{BACKEND_URL}/health/health")
+            backend_healthy = response.status_code == 200
+    except Exception:
+        backend_healthy = False
+
+    # Check required environment variables
+    required_vars = ["BACKEND_URL", "OPENAI_API_KEY"]
+    missing_vars = [var for var in required_vars if not os.getenv(var)]
+
+    is_ready = backend_healthy and len(missing_vars) == 0
+
+    return {
+        "status": "ready" if is_ready else "not_ready",
+        "service": "MCP HTTP Server",
+        "version": "1.0.0",
+        "backend_healthy": backend_healthy,
+        "missing_env_vars": missing_vars,
+        "checks": {
+            "backend": "healthy" if backend_healthy else "unhealthy",
+            "environment": "healthy" if len(missing_vars) == 0 else "missing_variables"
+        }
+    }
+
+
 # Root endpoint
 @app.get("/")
 async def root():
@@ -381,19 +412,30 @@ async def root():
     }
 
 
+def signal_handler(signum, frame):
+    """Handle graceful shutdown signals"""
+    print(f"\n🛑 Received signal {signum}. Shutting down MCP HTTP Server gracefully...")
+    sys.exit(0)
+
+# Register signal handlers for graceful shutdown
+signal.signal(signal.SIGTERM, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)
+
+
 if __name__ == "__main__":
     import uvicorn
-    
+
     port = int(os.getenv("MCP_HTTP_PORT", 8001))
-    
+
     print(f"🚀 Starting MCP HTTP Server on port {port}")
     print(f"📡 Backend URL: {BACKEND_URL}")
     print(f"🔧 Available tools: add_task, list_tasks, complete_task, delete_task, update_task")
-    
+
     uvicorn.run(
         "http_server:app",
         host="0.0.0.0",
         port=port,
-        reload=True,
-        log_level="info"
+        reload=False,  # Disable reload in production
+        log_level="info",
+        access_log=True
     )

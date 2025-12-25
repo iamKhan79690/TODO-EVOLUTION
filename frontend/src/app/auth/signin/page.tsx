@@ -4,10 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
-import { authClient } from '@/lib/auth-client';
+import { useAuth } from '@/lib/auth-provider';
 
 export default function SignIn() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -26,8 +27,8 @@ export default function SignIn() {
         return;
       }
 
-      // Real authentication using authClient
-      await authClient.signIn(email, password);
+      // Real authentication using useAuth hook (updates React context)
+      await login(email, password);
 
       // Redirect to dashboard on successful sign in
       router.push('/dashboard');

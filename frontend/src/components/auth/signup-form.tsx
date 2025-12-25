@@ -52,7 +52,7 @@ export default function SignUpForm({ onSubmit, isSubmitting }: SignUpFormProps) 
     watch,
     trigger,
   } = useForm<SignUpFormData>({
-    resolver: zodResolver(signUpSchema),
+    resolver: zodResolver(signUpSchema as any),
     mode: 'onChange',
   });
 
