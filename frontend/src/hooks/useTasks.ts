@@ -61,12 +61,12 @@ export function useTasks(params: TaskQueryParams = {}): UseTasksReturn {
       const optimisticTask: Task = {
         id: `temp-${Date.now()}`, // Temporary ID
         ...newTask,
-        status: newTask.status || 'pending',
+        status: 'pending',
         priority: newTask.priority || 'medium',
         createdAt: new Date(),
         updatedAt: new Date(),
         dueDate: newTask.dueDate ? new Date(newTask.dueDate) : undefined,
-      };
+      } as Task;
 
       queryClient.setQueryData(taskKeys.list(params), (old: any) => {
         if (!old?.data) return { data: [optimisticTask], pagination: { currentPage: 1, totalPages: 1, totalItems: 1, itemsPerPage: 20, hasNextPage: false, hasPreviousPage: false }, success: true, message: '' };

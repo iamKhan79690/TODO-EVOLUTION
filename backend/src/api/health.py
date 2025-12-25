@@ -119,6 +119,38 @@ async def ping():
     return {"message": "pong", "timestamp": datetime.utcnow()}
 
 
+@health_router.get("/ready")
+async def readiness_check():
+    """
+    Readiness check endpoint
+    Indicates if the service is ready to handle traffic
+    """
+    # Check critical dependencies
+    try:
+        is_db_connected = await validate_database_connection()
+        database_ready = is_db_connected
+    except Exception:
+        database_ready = False
+
+    # Check required environment variables
+    required_vars = ["DATABASE_URL", "JWT_SECRET"]
+    missing_vars = [var for var in required_vars if not getattr(settings, var, None)]
+
+    is_ready = database_ready and len(missing_vars) == 0
+
+    return {
+        "status": "ready" if is_ready else "not_ready",
+        "timestamp": datetime.utcnow(),
+        "version": settings.VERSION,
+        "database_ready": database_ready,
+        "missing_env_vars": missing_vars,
+        "checks": {
+            "database": "healthy" if database_ready else "unhealthy",
+            "environment": "healthy" if len(missing_vars) == 0 else "missing_variables"
+        }
+    }
+
+
 @health_router.get("/")
 async def api_info():
     """

@@ -1,0 +1,222 @@
+# Default values for todo-evolution
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  environment: development
+  registry: localhost
+
+# Frontend configuration
+frontend:
+  enabled: true
+  replicas: 2
+  image:
+    repository: todo-frontend
+    tag: "1.0.4"
+    pullPolicy: Never
+
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 3000
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  env:
+    NODE_ENV: "production"
+    PORT: "3000"
+    # Backend URL for server-side API proxy (internal K8s service)
+    BACKEND_URL: "http://todo-evolution-backend:8000"
+    # Public API URLs for client-side (matched to frontend code expectations)
+    NEXT_PUBLIC_API_URL: "/api/proxy"
+    NEXT_PUBLIC_FASTAPI_URL: "/api/proxy"
+    NEXT_PUBLIC_CHAT_API_URL: "/api/proxy"
+    NEXT_PUBLIC_AUTH_URL: "/api/proxy"
+    NEXT_PUBLIC_APP_URL: "http://127.0.0.1:43321"
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    fsGroup: 1001
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+      - ALL
+
+  probes:
+    liveness:
+      path: /api/health
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+    readiness:
+      path: /api/ready
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+
+# Backend configuration
+backend:
+  enabled: true
+  replicas: 2
+  image:
+    repository: todo-backend
+    tag: "1.0.0"
+    pullPolicy: Never
+
+  service:
+    type: NodePort
+    port: 8000
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  env:
+    HOST: "0.0.0.0"
+    PORT: "8000"
+    LOG_LEVEL: "INFO"
+    PYTHONPATH: "/app"
+    MCP_SERVER_URL: "http://todo-evolution-mcp-server:8001"
+    CORS_ORIGINS: "http://localhost:3000,http://localhost,http://192.168.49.2,http://127.0.0.1:43321,http://127.0.0.1:38937,http://127.0.0.1"
+
+  # Secret references
+  secretRefs:
+    - name: DATABASE_URL
+      secretKeyRef:
+        name: todo-secrets
+        key: DATABASE_URL
+    - name: JWT_SECRET
+      secretKeyRef:
+        name: todo-secrets
+        key: JWT_SECRET
+    - name: OPENAI_API_KEY
+      secretKeyRef:
+        name: todo-secrets
+        key: OPENAI_API_KEY
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop:
+      - ALL
+
+  probes:
+    liveness:
+      path: /health/
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      timeoutSeconds: 5
+    readiness:
+      path: /health/
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+
+# MCP Server configuration
+mcpServer:
+  enabled: true
+  replicas: 1
+  image:
+    repository: todo-mcp-server
+    tag: "1.0.1"
+    pullPolicy: Never
+
+  service:
+    type: ClusterIP
+    port: 8001
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  env:
+    HOST: "0.0.0.0"
+    PORT: "8001"
+    MCP_HTTP_PORT: "8001"
+    LOG_LEVEL: "INFO"
+    PYTHONPATH: "/app"
+    BACKEND_URL: "http://todo-evolution-backend:8000"
+
+  # Secret references
+  secretRefs:
+    - name: DATABASE_URL
+      secretKeyRef:
+        name: todo-secrets
+        key: DATABASE_URL
+    - name: OPENAI_API_KEY
+      secretKeyRef:
+        name: todo-secrets
+        key: OPENAI_API_KEY
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop:
+      - ALL
+
+  probes:
+    liveness:
+      path: /health
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      timeoutSeconds: 5
+    readiness:
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+
+# Service account configuration
+serviceAccount:
+  create: true
+  automountToken: false
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity rules
+affinity: {}
+
+# Secrets configuration
+secrets:
+  databaseURL: "postgresql+asyncpg://todo_user:change_me_in_production@localhost:5432/todo"
+  jwtSecret: "change-this-to-a-secure-random-string-min-32-chars"
+  openaiAPIKey: "sk-your-openai-api-key-here"

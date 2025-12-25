@@ -560,22 +560,22 @@ export interface UseTasksReturn {
   error: string | null;
 
   /** Refetch function */
-  refetch: () => Promise<void>;
+  refetch: () => Promise<any>;
 
   /** Create task function */
-  createTask: (data: CreateTaskDTO) => Promise<void>;
+  createTask: (data: CreateTaskDTO) => Promise<any>;
 
   /** Update task function */
-  updateTask: (id: string, data: UpdateTaskDTO) => Promise<void>;
+  updateTask: (id: string, data: UpdateTaskDTO) => Promise<any>;
 
   /** Delete task function */
-  deleteTask: (id: string) => Promise<void>;
+  deleteTask: (id: string) => Promise<any>;
 
   /** Bulk update function */
-  bulkUpdate: (ids: string[], data: UpdateTaskDTO) => Promise<void>;
+  bulkUpdate: (ids: string[], data: UpdateTaskDTO) => Promise<any>;
 
   /** Bulk delete function */
-  bulkDelete: (ids: string[]) => Promise<void>;
+  bulkDelete: (ids: string[]) => Promise<any>;
 }
 
 /**

@@ -1,0 +1,128 @@
+---
+# MCP Server Deployment for FastAPI Application
+# Following Phase IV Constitutional Requirements
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-evolution-mcp-server
+  labels:
+    app: todo-evolution
+    component: mcp-server
+    version: "1.0.0"
+    managed-by: helm
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: todo-evolution
+      component: mcp-server
+  template:
+    metadata:
+      labels:
+        app: todo-evolution
+        component: mcp-server
+        version: "1.0.0"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      serviceAccountName: todo-evolution-mcp-server
+      containers:
+      - name: mcp-server
+        image: todo-mcp-server:1.0.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8001
+          protocol: TCP
+        env:
+        - name: HOST
+          value: "0.0.0.0"
+        - name: PORT
+          value: "8001"
+        - name: MCP_HTTP_PORT
+          value: "8001"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: PYTHONPATH
+          value: "/app"
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: todo-secrets
+              key: OPENAI_API_KEY
+        - name: BACKEND_URL
+          value: "http://todo-evolution-backend:8000"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-evolution-mcp-server
+  labels:
+    app: todo-evolution
+    component: mcp-server
+    managed-by: helm
+spec:
+  type: ClusterIP
+  selector:
+    app: todo-evolution
+    component: mcp-server
+  ports:
+  - name: http
+    port: 8001
+    targetPort: http
+    protocol: TCP
+  sessionAffinity: None
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: todo-evolution-mcp-server
+  labels:
+    app: todo-evolution
+    component: mcp-server
+    managed-by: helm
+automountServiceAccountToken: false

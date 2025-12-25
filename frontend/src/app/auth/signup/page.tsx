@@ -4,11 +4,12 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { authClient } from '@/lib/auth-client';
+import { useAuth } from '@/lib/auth-provider';
 import SignUpForm from '@/components/auth/signup-form';
 
 export default function SignUp() {
   const router = useRouter();
+  const { register } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -17,8 +18,8 @@ export default function SignUp() {
     setError('');
 
     try {
-      // Real registration using authClient
-      await authClient.signUp(data.email, data.password, data.name);
+      // Real registration using useAuth hook (updates React context)
+      await register(data.email, data.password, data.name);
 
       // Redirect to dashboard on successful sign up
       router.push('/dashboard');

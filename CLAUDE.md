@@ -346,3 +346,6 @@ Then use appropriate agent to fix:
 - List of issues to fix
 
 ---
+## Required Guidlines :
+ - this is a wsl linux ubuntu env so run commands and execution according to this envronment.
+ - always check spec project specs and history to egt to know speckit old context .
