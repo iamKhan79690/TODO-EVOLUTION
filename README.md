@@ -5,6 +5,8 @@
 [![Next.js](https://img.shields.io/badge/next.js-16.0.7-black.svg)](https://nextjs.org/)
 [![FastAPI](https://img.shields.io/badge/fastapi-0.121.2-green.svg)](https://fastapi.tiangolo.com/)
 [![PostgreSQL](https://img.shields.io/badge/postgresql-15+-blue.svg)](https://www.postgresql.org/)
+[![Kubernetes](https://img.shields.io/badge/kubernetes-1.28+-326ce5.svg)](https://kubernetes.io/)
+[![Helm](https://img.shields.io/badge/helm-3.19+-0fd69e.svg)](https://helm.sh/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 A sophisticated AI-powered task management application evolving from console to full-stack web application with an intelligent chatbot assistant.
@@ -27,6 +29,7 @@ A sophisticated AI-powered task management application evolving from console to 
 - [API Documentation](#-api-documentation)
 - [Testing](#-testing)
 - [Deployment](#-deployment)
+- [Kubernetes Deployment with Minikube](#️-kubernetes-deployment-with-minikube)
 - [Contributing](#-contributing)
 - [License](#-license)
 
@@ -39,8 +42,9 @@ A sophisticated AI-powered task management application evolving from console to 
 - **Phase I**: Console-based task management (completed)
 - **Phase II**: Full-stack web application with authentication (completed)
 - **Phase III**: AI-powered chat assistant with natural language task management (✅ **PRODUCTION READY**)
+- **Phase IV**: Kubernetes deployment with Minikube and Helm charts (✅ **PRODUCTION READY**)
 
-The AI Chat Assistant allows users to manage tasks through natural language conversations, with real-time processing and mobile optimization.
+The AI Chat Assistant allows users to manage tasks through natural language conversations, with real-time processing and mobile optimization. Phase IV adds production-grade Kubernetes deployment capabilities with complete containerization and orchestration.
 
 ---
 
@@ -95,6 +99,14 @@ The AI Chat Assistant allows users to manage tasks through natural language conv
 | SQLModel | 0.0.27 | ORM with SQLAlchemy 2.0 |
 | OpenAI SDK | 2.8+ | AI agent integration |
 
+### DevOps & Orchestration
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Kubernetes | 1.28+ | Container orchestration |
+| Helm | 3.19+ | Kubernetes package manager |
+| Minikube | Latest | Local Kubernetes cluster |
+| Docker | Latest | Container runtime |
+
 ### Optional Components
 | Technology | Purpose |
 |------------|---------|
@@ -134,6 +146,22 @@ TODO-Evolution/
 │   ├── config/              # JWT and database configuration
 │   ├── main.py              # MCP server entry point
 │   └── server.py            # HTTP server alternative
+│
+├── helm-chart/              # Kubernetes Helm charts (Phase IV)
+│   ├── Chart.yaml           # Helm chart metadata
+│   ├── values.yaml          # Configuration values
+│   └── templates/           # Kubernetes resource templates
+│       ├── frontend/        # Frontend deployment and service
+│       ├── backend/         # Backend deployment and service
+│       └── mcp-server/      # MCP server deployment and service
+│
+├── specs/                   # Spec-Driven Development artifacts
+│   └── 011-minikube-helm-deploy/  # Phase IV deployment specifications
+│       ├── spec.md          # Feature specification
+│       ├── plan.md          # Implementation plan
+│       ├── tasks.md         # Detailed tasks (77 tasks)
+│       ├── quickstart.md    # Quick start guide
+│       └── research.md      # Research findings
 │
 └── package.json             # Root workspace configuration
 ```
@@ -451,6 +479,396 @@ npm run test:e2e    # Playwright E2E tests
 
 ---
 
+## ☸️ Kubernetes Deployment with Minikube
+
+### Overview
+
+TODO-Evolution includes complete Kubernetes deployment support using **Minikube** (local Kubernetes) and **Helm charts** for production-grade containerization and orchestration.
+
+**Deployment Features:**
+- 🐳 Multi-stage Docker builds with security hardening
+- 🔐 Non-root user containers (UID 1000/1001)
+- 🏥 Health probes (liveness and readiness)
+- 📊 Resource limits and requests
+- 🔄 Rolling updates with zero downtime
+- 📦 Semantic versioning for all images
+- 🔒 Secret management with Kubernetes Secrets
+- ⚙️ Configurable via Helm values
+
+### Prerequisites for Kubernetes Deployment
+
+| Requirement | Minimum Version | Installation |
+|-------------|-----------------|--------------|
+| **Minikube** | Latest | [Install Guide](https://minikube.sigs.k8s.io/docs/start/) |
+| **Docker Desktop** | Latest | [Download](https://www.docker.com/products/docker-desktop/) |
+| **kubectl** | 1.28+ | `gcloud components install kubectl` or [Install Guide](https://kubernetes.io/docs/tasks/tools/) |
+| **Helm** | 3.19+ | [Install Guide](https://helm.sh/docs/intro/install/) |
+| **System Resources** | 2 CPUs, 6GB RAM | Adjust as needed |
+
+### Quick Start: Minikube Deployment
+
+#### 1. Start Minikube Cluster
+
+```bash
+# Start Minikube with Docker driver (adjust resources based on your system)
+minikube start --cpus=2 --memory=6144 --disk-size=20g --driver=docker
+
+# Enable required addons
+minikube addons enable ingress
+minikube addons enable metrics-server
+
+# Verify Minikube status
+minikube status
+```
+
+#### 2. Configure Docker Environment
+
+Point your local Docker CLI to Minikube's internal Docker daemon:
+
+```bash
+# Linux/macOS:
+eval $(minikube docker-env)
+
+# Windows PowerShell:
+minikube docker-env | Invoke-Expression
+
+# Verify Docker is pointing to Minikube
+docker ps
+```
+
+#### 3. Build Docker Images
+
+```bash
+# Build all three images (can run in parallel in separate terminals)
+docker build -t todo-frontend:1.0.5 ./frontend
+docker build -t todo-backend:2.0.2 ./backend
+docker build -t todo-mcp-server:1.0.2 ./mcp_server
+
+# Verify images exist
+docker images | grep todo
+```
+
+#### 4. Load Images into Minikube
+
+```bash
+# Make images available to Minikube Kubernetes cluster
+minikube image load todo-frontend:1.0.5
+minikube image load todo-backend:2.0.2
+minikube image load todo-mcp-server:1.0.2
+```
+
+#### 5. Configure Helm Chart Secrets
+
+Edit `helm-chart/values.yaml` and update secrets section:
+
+```yaml
+secrets:
+  databaseURL: "postgresql+asyncpg://user:password@ep-xyz.region.aws.neon.tech/neondb?ssl=require"
+  jwtSecret: "your-secure-jwt-secret-min-32-chars"
+  openaiAPIKey: "sk-your-openai-key"
+  geminiAPIKey: "AIzaSy-your-gemini-key"
+```
+
+#### 6. Deploy with Helm
+
+```bash
+# Lint Helm chart first
+helm lint ./helm-chart
+
+# Install application
+helm install todo-evolution ./helm-chart
+
+# Or upgrade if already installed
+helm upgrade todo-evolution ./helm-chart
+```
+
+#### 7. Monitor Deployment
+
+```bash
+# Watch pods startup (wait for all Running)
+kubectl get pods -w
+
+# Check pod status
+kubectl get pods
+
+# View logs if any pod fails
+kubectl logs -l app=todo-evolution --all-containers=true
+
+# Verify all services are running
+kubectl get services
+```
+
+#### 8. Access Deployed Application
+
+```bash
+# Get frontend URL
+minikube service todo-evolution-frontend --url
+
+# Get backend URL
+minikube service todo-evolution-backend --url
+
+# Open in browser
+minikube service todo-evolution-frontend
+```
+
+**Example URLs:**
+- Frontend: `http://127.0.0.1:53223`
+- Backend API: `http://127.0.0.1:53263`
+- MCP Server: Available internally via `http://todo-evolution-mcp-server:8001`
+
+### Automated Deployment Scripts
+
+For convenience, use the provided automated scripts:
+
+**Linux/macOS:**
+```bash
+chmod +x rebuild-and-redeploy.sh
+./rebuild-and-redeploy.sh
+```
+
+**Windows:**
+```powershell
+.\rebuild-and-redeploy.bat
+```
+
+These scripts handle:
+- Docker builds (all three services)
+- Image loading into Minikube
+- Helm deployment/upgrade
+- Pod status verification
+
+### Kubernetes Architecture
+
+```
+Minikube Cluster (Kubernetes 1.28+)
+├── Namespace: default
+│
+├── Frontend Deployment
+│   ├── Replicas: 2
+│   ├── Image: todo-frontend:1.0.5
+│   ├── Service: LoadBalancer (NodePort on Minikube)
+│   ├── Resources: 100m-500m CPU, 128Mi-512Mi Memory
+│   └── Health: /api/health (liveness + readiness)
+│
+├── Backend Deployment
+│   ├── Replicas: 2
+│   ├── Image: todo-backend:2.0.2
+│   ├── Service: NodePort
+│   ├── Resources: 100m-500m CPU, 128Mi-512Mi Memory
+│   └── Health: /health/ (liveness + readiness)
+│
+└── MCP Server Deployment
+    ├── Replicas: 1
+    ├── Image: todo-mcp-server:1.0.2
+    ├── Service: ClusterIP (internal only)
+    ├── Resources: 100m-500m CPU, 128Mi-512Mi Memory
+    └── Health: /health (liveness + readiness)
+```
+
+### Helm Chart Configuration
+
+The `helm-chart/values.yaml` file contains all configurable parameters:
+
+```yaml
+# Frontend Configuration
+frontend:
+  enabled: true
+  replicas: 2
+  image:
+    repository: todo-frontend
+    tag: "1.0.5"
+    pullPolicy: IfNotPresent
+
+# Backend Configuration
+backend:
+  enabled: true
+  replicas: 2
+  image:
+    repository: todo-backend
+    tag: "2.0.2"
+    pullPolicy: IfNotPresent
+
+# MCP Server Configuration
+mcpServer:
+  enabled: true
+  replicas: 1
+  image:
+    repository: todo-mcp-server
+    tag: "1.0.2"
+    pullPolicy: IfNotPresent
+```
+
+### Troubleshooting Minikube Deployment
+
+#### Pods not starting?
+
+```bash
+# Check pod status
+kubectl get pods
+
+# Describe pod for detailed error info
+kubectl describe pod <pod-name>
+
+# View pod logs
+kubectl logs <pod-name>
+kubectl logs <pod-name> -c <container-name>
+
+# Common issues:
+# - ErrImageNeverPull: Use pullPolicy: IfNotPresent and minikube image load
+# - CrashLoopBackOff: Check logs, often database URL or secret issues
+```
+
+#### Services not accessible?
+
+```bash
+# List all services
+kubectl get services
+
+# Get service details
+kubectl describe service todo-evolution-frontend
+
+# Verify endpoints exist
+kubectl get endpoints
+
+# Use Minikube tunnel for LoadBalancer (optional)
+minikube tunnel
+```
+
+#### Docker environment issues?
+
+```bash
+# Reset Docker environment
+eval $(minikube docker-env --unset)
+
+# Re-configure Docker environment
+eval $(minikube docker-env)
+
+# Verify Docker is pointing to Minikube
+docker context ls
+docker context use minikube
+```
+
+### Updating Deployed Application
+
+#### Update Image Version
+
+1. Build new image:
+   ```bash
+   docker build -t todo-backend:2.0.3 ./backend
+   ```
+
+2. Load into Minikube:
+   ```bash
+   minikube image load todo-backend:2.0.3
+   ```
+
+3. Update `helm-chart/values.yaml`:
+   ```yaml
+   backend:
+     image:
+       tag: "2.0.3"
+   ```
+
+4. Upgrade Helm release:
+   ```bash
+   helm upgrade todo-evolution ./helm-chart
+   ```
+
+5. Monitor rolling update:
+   ```bash
+   kubectl rollout status deployment/todo-evolution-backend
+   ```
+
+#### Rollback to Previous Version
+
+```bash
+# List Helm revisions
+helm history todo-evolution
+
+# Rollback to previous version
+helm rollback todo-evolution
+
+# Or rollback to specific revision
+helm rollback todo-evolution 2
+```
+
+### Scaling Applications
+
+```bash
+# Scale frontend to 3 replicas
+kubectl scale deployment/todo-evolution-frontend --replicas=3
+
+# Scale backend to 4 replicas
+kubectl scale deployment/todo-evolution-backend --replicas=4
+
+# Verify scaled deployment
+kubectl get pods
+```
+
+### Monitoring and Logs
+
+```bash
+# View all pod logs
+kubectl logs -l app=todo-evolution --all-containers=true --tail=50
+
+# Follow logs in real-time
+kubectl logs -l app=todo-evolution --all-containers=true --follow
+
+# Check resource usage
+kubectl top pods
+
+# Get cluster events
+kubectl get events --sort-by='.lastTimestamp'
+
+# Open Kubernetes Dashboard
+minikube dashboard
+```
+
+### Cleanup
+
+```bash
+# Uninstall Helm release
+helm uninstall todo-evolution
+
+# Delete Kubernetes resources
+kubectl delete deployment,service,secret -l app.kubernetes.io/name=todo-evolution
+
+# Stop Minikube cluster
+minikube stop
+
+# Delete Minikube cluster (clean slate)
+minikube delete
+```
+
+### Production Kubernetes Deployment
+
+For production Kubernetes clusters (AWS EKS, Google GKE, Azure AKS):
+
+1. **Push images to container registry:**
+   ```bash
+   docker tag todo-frontend:1.0.5 your-registry/todo-frontend:1.0.5
+   docker push your-registry/todo-frontend:1.0.5
+   ```
+
+2. **Update `values.yaml` with registry paths:**
+   ```yaml
+   frontend:
+     image:
+       repository: your-registry/todo-frontend
+       tag: "1.0.5"
+       pullPolicy: Always
+   ```
+
+3. **Deploy to production cluster:**
+   ```bash
+   kubectl config use-context production-cluster
+   helm install todo-evolution ./helm-chart --namespace production --create-namespace
+   ```
+
+For detailed deployment procedures, see `specs/011-minikube-helm-deploy/quickstart.md`
+
+---
+
 ## 🤖 AI Chat Assistant Usage
 
 ### Getting Started
@@ -500,6 +918,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <p align="center">
-  <strong>Built with ❤️ using Next.js, FastAPI, PostgreSQL, and AI</strong><br>
-  © 2025 TODO-EVOLUTION • AI-Powered Productivity Platform
+  <strong>Built with ❤️ using Next.js, FastAPI, PostgreSQL, Kubernetes, and AI</strong><br>
+  © 2025 TODO-EVOLUTION • AI-Powered Productivity Platform<br>
+  <br>
+  <a href="#️-kubernetes-deployment-with-minikube">☸️ Deploy on Kubernetes</a> •
+  <a href="https://minikube.sigs.k8s.io/" target="_blank">Minikube</a> •
+  <a href="https://helm.sh/" target="_blank">Helm Charts</a>
 </p>
