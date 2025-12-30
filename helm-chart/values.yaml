@@ -12,8 +12,8 @@ frontend:
   replicas: 2
   image:
     repository: todo-frontend
-    tag: "1.0.4"
-    pullPolicy: Never
+    tag: "1.0.5"
+    pullPolicy: IfNotPresent
 
   service:
     type: LoadBalancer
@@ -70,8 +70,8 @@ backend:
   replicas: 2
   image:
     repository: todo-backend
-    tag: "1.0.0"
-    pullPolicy: Never
+    tag: "2.0.2"
+    pullPolicy: IfNotPresent
 
   service:
     type: NodePort
@@ -107,6 +107,10 @@ backend:
       secretKeyRef:
         name: todo-secrets
         key: OPENAI_API_KEY
+    - name: GEMINI_API_KEY
+      secretKeyRef:
+        name: todo-secrets
+        key: GEMINI_API_KEY
 
   podSecurityContext:
     runAsNonRoot: true
@@ -138,8 +142,8 @@ mcpServer:
   replicas: 1
   image:
     repository: todo-mcp-server
-    tag: "1.0.1"
-    pullPolicy: Never
+    tag: "1.0.2"
+    pullPolicy: IfNotPresent
 
   service:
     type: ClusterIP
@@ -217,6 +221,7 @@ affinity: {}
 
 # Secrets configuration
 secrets:
-  databaseURL: "postgresql+asyncpg://todo_user:change_me_in_production@localhost:5432/todo"
-  jwtSecret: "change-this-to-a-secure-random-string-min-32-chars"
+  databaseURL: "postgresql+asyncpg://neondb_owner:npg_6XJMDV8OidrG@ep-soft-wave-a4c4579s-pooler.us-east-1.aws.neon.tech/neondb?ssl=require"
+  jwtSecret: "mHcvjk-NHb8wkRW_LJPpbuiH2ISXCOJ3B-CLIovVOX8"
   openaiAPIKey: "sk-your-openai-api-key-here"
+  geminiAPIKey: "AIzaSyCSDQHIlBcYxZZ9IiZgpiPvZo66ulXhywg"
