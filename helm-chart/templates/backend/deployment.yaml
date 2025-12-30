@@ -62,6 +62,11 @@ spec:
             secretKeyRef:
               name: {{ (index .Values.backend.secretRefs 2).secretKeyRef.name }}
               key: {{ (index .Values.backend.secretRefs 2).secretKeyRef.key }}
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ (index .Values.backend.secretRefs 3).secretKeyRef.name }}
+              key: {{ (index .Values.backend.secretRefs 3).secretKeyRef.key }}
         resources:
           {{- toYaml .Values.backend.resources | nindent 10 }}
         livenessProbe:
