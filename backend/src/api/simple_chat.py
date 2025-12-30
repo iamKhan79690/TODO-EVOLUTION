@@ -12,7 +12,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
-import google.generativeai as genai
+import openai
 
 from ..dependencies.auth import get_current_active_user
 from ..models.models import User
@@ -56,9 +56,9 @@ Examples of what you can help with:
 - Providing task management tips"""
 
 
-async def chat_with_gemini(message: str, user_id: int) -> dict:
+async def chat_with_groq(message: str, user_id: int) -> dict:
     """
-    Direct chat with Google Gemini without complex session handling.
+    Direct chat with Groq API using OpenAI SDK compatibility.
     
     Args:
         message: User's message
@@ -68,31 +68,38 @@ async def chat_with_gemini(message: str, user_id: int) -> dict:
         dict with response and success status
     """
     try:
-        # Configure Gemini
-        api_key = settings.GEMINI_API_KEY
+        # Get Groq API key
+        api_key = settings.GROQ_API_KEY
         if not api_key:
             # Fallback: try environment variable
-            api_key = os.getenv("GEMINI_API_KEY", "")
+            api_key = os.getenv("GROQ_API_KEY", "")
         
         if not api_key:
-            logger.error("No Gemini API key configured")
+            logger.error("No Groq API key configured")
             return {
                 "response": "I'm sorry, the AI service is not configured. Please contact the administrator.",
                 "success": False
             }
         
-        genai.configure(api_key=api_key)
+        # Create OpenAI client pointing to Groq
+        import openai
+        client = openai.AsyncOpenAI(
+            api_key=api_key,
+            base_url="https://api.groq.com/openai/v1"
+        )
         
-        # Create model
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Generate response using Groq (fast 8B model for simple chat)
+        response = await client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": message}
+            ],
+            temperature=0.7,
+            max_tokens=1024
+        )
         
-        # Create prompt with system context
-        full_prompt = f"{SYSTEM_PROMPT}\n\nUser: {message}"
-        
-        # Generate response
-        response = model.generate_content(full_prompt)
-        
-        ai_response = response.text if response.text else "I'm here to help!"
+        ai_response = response.choices[0].message.content or "I'm here to help!"
         
         logger.info("Simple chat successful", 
                    user_id=user_id, 
@@ -135,7 +142,7 @@ async def simple_chat(
                user_id=current_user.id, 
                message=request.message[:50])
     
-    result = await chat_with_gemini(request.message, current_user.id)
+    result = await chat_with_groq(request.message, current_user.id)
     
     return SimpleChatResponse(
         response=result["response"],
@@ -147,11 +154,12 @@ async def simple_chat(
 @router.get("/health")
 async def simple_chat_health():
     """Health check for simple chat endpoint."""
-    has_key = bool(settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY"))
+    has_key = bool(settings.GROQ_API_KEY or os.getenv("GROQ_API_KEY"))
     return {
         "status": "healthy" if has_key else "degraded",
         "endpoint": "simple-chat",
-        "model": "gemini-1.5-flash",
+        "model": "llama-3.1-8b-instant",
+        "provider": "groq",
         "api_configured": has_key,
         "timestamp": datetime.utcnow().isoformat()
     }

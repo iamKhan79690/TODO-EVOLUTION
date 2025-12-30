@@ -73,7 +73,7 @@ async def health():
 
 # Get backend URL from environment
 def get_backend_url():
-    return os.getenv("BACKEND_URL", "http://todo-evolution-backend:8000")
+    return os.getenv("BACKEND_URL", "http://localhost:8000")
 
 
 # Tool endpoints
