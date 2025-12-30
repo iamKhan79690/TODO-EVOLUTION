@@ -184,10 +184,12 @@ class MCPClient:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 # MCP tools are exposed at /tools/{tool_name}
+                # Handle None params by defaulting to empty dict
+                safe_params = params if params is not None else {}
                 request_data = {
                     "user_id": self.user_id,
                     "jwt_token": self.jwt_token,
-                    **params
+                    **safe_params
                 }
                 
                 response = await client.post(
@@ -229,7 +231,8 @@ class OpenAIAgentWithMCP:
     then calls the MCP server to execute the operation.
     """
     
-    # Gemini endpoint (OpenAI-compatible)
+    # AI Provider endpoints (OpenAI-compatible)
+    GROQ_BASE_URL = "https://api.groq.com/openai/v1"
     GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
     
     def __init__(
@@ -253,12 +256,20 @@ class OpenAIAgentWithMCP:
         self.use_mcp = settings.USE_MCP_TOOLS
         self.tool_calls_made = []
         
-        # Initialize OpenAI client (prefer OpenAI, fallback to Gemini)
+        # Initialize OpenAI client (prefer Groq for fast inference)
+        groq_key = settings.GROQ_API_KEY
         openai_key = settings.OPENAI_API_KEY
         gemini_key = settings.GEMINI_API_KEY
         
-        # Prefer OpenAI (has working quota)
-        if openai_key:
+        # Prefer Groq (ultra-fast inference)
+        if groq_key:
+            self.client = openai.AsyncOpenAI(
+                api_key=groq_key,
+                base_url=self.GROQ_BASE_URL
+            )
+            self.model = "llama-3.3-70b-versatile"  # Official Groq model with superior tool use
+            self.provider = "groq"
+        elif openai_key:
             self.client = openai.AsyncOpenAI(api_key=openai_key)
             self.model = "gpt-4o-mini"  # Cost-effective model
             self.provider = "openai"
@@ -267,10 +278,10 @@ class OpenAIAgentWithMCP:
                 api_key=gemini_key,
                 base_url=self.GEMINI_BASE_URL
             )
-            self.model = "gemini-2.0-flash"
+            self.model = "gemini-1.5-flash"  # Stable model with better quota limits
             self.provider = "gemini"
         else:
-            raise ValueError("No AI API key configured (OPENAI_API_KEY or GEMINI_API_KEY)")
+            raise ValueError("No AI API key configured (GROQ_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY)")
         
         # Cache for dynamically loaded tools
         self._tools_cache: Optional[List[Dict]] = None
@@ -418,18 +429,23 @@ class OpenAIAgentWithMCP:
             # Get tools (dynamic or fallback)
             tools = await self._get_mcp_tools()
             
-            # Call OpenAI with tools
+            # Call OpenAI with tools (temperature=0 for reliable tool calling)
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 tools=tools,
-                tool_choice="auto"
+                tool_choice="auto",
+                temperature=0
             )
             
             assistant_message = response.choices[0].message
             
-            # Check if the model wants to use a tool
-            if assistant_message.tool_calls:
+            # Multi-step tool call loop (max 3 iterations for safety)
+            max_iterations = 3
+            iteration = 0
+            
+            while assistant_message.tool_calls and iteration < max_iterations:
+                iteration += 1
                 # Process each tool call
                 tool_results = []
                 for tool_call in assistant_message.tool_calls:
@@ -439,7 +455,8 @@ class OpenAIAgentWithMCP:
                     logger.info(
                         "TRACE: AI requested tool call",
                         tool=function_name,
-                        args=function_args
+                        args=function_args,
+                        iteration=iteration
                     )
                     
                     # Call MCP tool
@@ -457,19 +474,22 @@ class OpenAIAgentWithMCP:
                         "content": json.dumps(result)
                     })
                 
-                # Get final response from AI with tool results
+                # Add tool results and get next response (with tools enabled for multi-step)
                 messages.append(assistant_message)
                 messages.extend(tool_results)
                 
-                final_response = await self.client.chat.completions.create(
+                response = await self.client.chat.completions.create(
                     model=self.model,
-                    messages=messages
+                    messages=messages,
+                    tools=tools,  # Keep tools enabled for multi-step operations
+                    tool_choice="auto",
+                    temperature=0
                 )
                 
-                response_text = final_response.choices[0].message.content
-            else:
-                # No tool call, just return the response
-                response_text = assistant_message.content
+                assistant_message = response.choices[0].message
+            
+            # Get final text response
+            response_text = assistant_message.content
             
             # Determine the operation type from tool calls (use the LAST one as the primary outcome)
             operation = None
