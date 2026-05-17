@@ -121,6 +121,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [isAddingTask, setIsAddingTask] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -135,10 +136,12 @@ export default function Dashboard() {
   const loadTasks = async () => {
     try {
       setLoading(true);
+      setError(null);
       const { tasks } = await taskAPI.getTasks();
       setTasks(tasks);
-    } catch (error) {
-      console.error('Failed to load tasks:', error);
+    } catch (err: any) {
+      console.error('Failed to load tasks:', err);
+      setError(err.message || 'Failed to load tasks');
     } finally {
       setLoading(false);
     }
@@ -171,11 +174,13 @@ export default function Dashboard() {
     const title = newTaskTitle.trim();
     setNewTaskTitle('');
     setIsAddingTask(false);
+    setError(null);
     try {
       const newTask = await taskAPI.createTask({ title, priority: 'medium' });
       setTasks(prev => [newTask, ...prev]);
-    } catch (error) {
-      console.error('Failed to create task:', error);
+    } catch (err: any) {
+      console.error('Failed to create task:', err);
+      setError(err.message || 'Failed to create task');
     }
   };
 
@@ -221,6 +226,24 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {error && (
+          <div style={{
+            padding: '12px 16px',
+            marginBottom: '16px',
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '8px',
+            color: '#dc2626',
+            fontSize: '14px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            <span>{error}</span>
+            <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '18px' }}>&times;</button>
+          </div>
+        )}
 
         <div className="task-board">
           {loading ? (
