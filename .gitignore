@@ -1,25 +1,11 @@
 # Dependencies
 node_modules/
-venv/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.so
-*.egg
-*.egg-info/
-dist/
-build/
 
 # Environment variables
 .env
 .env.local
 .env.*.local
-backend/.env
 frontend/.env.local
-mcp_server/.env
-agent/.env
 
 # IDE
 .vscode/
@@ -35,27 +21,12 @@ Thumbs.db
 # Logs
 *.log
 logs/
-*.log.*
 
 # Temporary files
 *.tmp
 *.temp
-/tmp/
-
-# Docker
-.dockerignore
-
-# Chart temporary files
-todo-evolution-chart/
 
 # Build artifacts
 frontend/.next/
 frontend/out/
 frontend/build/
-
-# Minikube
-.minikube/
-kubectl
-
-# Junk
-"junk md files/"

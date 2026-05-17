@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import Groq from 'groq-sdk';
 
-const AGENT_URL = process.env.AGENT_URL || 'http://localhost:8001';
 const MAX_MESSAGE_LENGTH = 500;
+
+const SYSTEM_PROMPT = `You are Taska AI, a helpful TODO assistant. You help users manage their tasks.
+When users want to add, list, complete, or delete tasks, acknowledge their request and provide a helpful response. Be concise and friendly.
+
+Examples of what you can help with:
+- Adding new tasks
+- Listing existing tasks
+- Marking tasks as complete
+- Deleting tasks
+- Providing task management tips`;
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -12,7 +22,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { message, session_id } = await request.json();
+  const { message } = await request.json();
 
   if (!message || typeof message !== 'string') {
     return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -26,23 +36,29 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const response = await fetch(`${AGENT_URL}/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message,
-        user_id: user.id,
-        session_id: session_id || user.id,
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      return NextResponse.json({ error: 'Agent error', details: err }, { status: 502 });
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { reply: 'AI service is not configured. Please set GROQ_API_KEY.', tool_calls: [] },
+        { status: 200 }
+      );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    const groq = new Groq({ apiKey });
+
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: message },
+      ],
+      temperature: 0.7,
+      max_tokens: 1024,
+    });
+
+    const reply = completion.choices[0]?.message?.content || "I'm here to help!";
+
+    return NextResponse.json({ reply, tool_calls: [] });
   } catch {
     return NextResponse.json(
       { reply: 'The assistant is currently unavailable. Please try again later.', tool_calls: [] },
