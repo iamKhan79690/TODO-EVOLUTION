@@ -1,197 +1,451 @@
-import Link from 'next/link';
-import { ArrowRight, CheckCircle2, Calendar, Clock, Users } from 'lucide-react';
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useAuth } from "@/lib/auth-provider";
+import "./landing.css";
+
+function TypingText() {
+  const texts = [
+    "Finish Q3 report by Thursday",
+    "Call mom this Sunday evening",
+    "Book flight for the conference",
+    "Review team PRs before standup",
+  ];
+  const [display, setDisplay] = useState(texts[0]);
+  const tIdx = useRef(0);
+  const cIdx = useRef(texts[0].length);
+  const deleting = useRef(false);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+
+    function step() {
+      const target = texts[tIdx.current];
+      if (!deleting.current) {
+        cIdx.current++;
+        setDisplay(target.slice(0, cIdx.current));
+        if (cIdx.current === target.length) {
+          deleting.current = true;
+          timer = setTimeout(step, 2200);
+          return;
+        }
+      } else {
+        cIdx.current--;
+        setDisplay(target.slice(0, cIdx.current));
+        if (cIdx.current === 0) {
+          deleting.current = false;
+          tIdx.current = (tIdx.current + 1) % texts.length;
+          timer = setTimeout(step, 380);
+          return;
+        }
+      }
+      timer = setTimeout(step, deleting.current ? 38 : 68);
+    }
+
+    timer = setTimeout(step, 1400);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return <span className="mockup-input-text">{display}</span>;
+}
+
+function FadeUp({
+  children,
+  className = "",
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add("in");
+            observer.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -48px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={`fade-up ${className}`}
+      style={{ transitionDelay: `${delay}s` }}
+    >
+      {children}
+    </div>
+  );
+}
 
 export default function Home() {
+  const [scrolled, setScrolled] = useState(false);
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 24);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Navigation */}
-      <nav className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">📝 Todo Evolution</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/dashboard"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/auth/signin"
-                className="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                Sign In
-              </Link>
-            </div>
-          </div>
+    <div className="landing-page">
+      {/* NAV */}
+      <nav className={`landing-nav ${scrolled ? "scrolled" : ""}`}>
+        <Link className="logo" href="#">
+          Taska<span>.</span>
+        </Link>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#testimonials">Testimonials</a></li>
+        </ul>
+        <div className="nav-actions">
+          {isAuthenticated ? (
+            <Link className="btn btn-primary" href="/dashboard">Dashboard</Link>
+          ) : (
+            <>
+              <Link className="btn btn-ghost" href="/auth/signin">Sign in</Link>
+              <Link className="btn btn-primary" href="/auth/signup">Get started free</Link>
+            </>
+          )}
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-        <div className="text-center">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Modern Task Management
-            </span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Transform your productivity with our intuitive task management system.
-            Organize, prioritize, and complete your tasks with ease.
+      {/* HERO */}
+      <div className="hero">
+        <div className="hero-left">
+          <div className="hero-badge">
+            <div className="badge-dot"></div>
+            Now with AI-powered intelligence
+          </div>
+          <h1>Think less.<br />Do <em>more.</em></h1>
+          <p className="hero-desc">
+            Taska turns your scattered to-dos into a razor-sharp daily plan. Just tell it what&apos;s on your mind — AI handles the organizing, prioritizing, and scheduling.
           </p>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <Link
-              href="/dashboard"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center shadow-lg"
-            >
-              Get Started
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Link>
-            <Link
-              href="/auth/signup"
-              className="border border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-3 rounded-lg font-semibold transition-colors"
-            >
-              Create Account
-            </Link>
+          <div className="hero-actions">
+            {isAuthenticated ? (
+              <Link className="btn btn-primary btn-lg" href="/dashboard">Go to Dashboard</Link>
+            ) : (
+              <Link className="btn btn-primary btn-lg" href="/auth/signup">Start for free</Link>
+            )}
+            <Link className="btn btn-outline btn-lg" href="#how">Watch demo</Link>
+          </div>
+          <div className="hero-note">
+            <span>No credit card required</span>
+            <div className="hero-note-dot"></div>
+            <span>Free forever plan</span>
+            <div className="hero-note-dot"></div>
+            <span>Setup in 60 seconds</span>
           </div>
         </div>
 
-        {/* Features Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          <div className="text-center p-8 bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-8 h-8 text-blue-600" />
+        <div className="hero-visual">
+          <div className="mockup-glow"></div>
+
+          {/* Floating stat card */}
+          <div className="float-card">
+            <div className="float-eyebrow">Done today</div>
+            <div className="float-stat">12</div>
+            <div className="float-sub">↑ 3 more than yesterday</div>
+            <div className="float-progress"><div className="float-fill"></div></div>
+          </div>
+
+          {/* Main app mockup */}
+          <div className="mockup-main">
+            <div className="mockup-bar">
+              <span className="mockup-bar-title">Today</span>
+              <span className="mockup-bar-date">Sat, May 17</span>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Smart Organization</h3>
-            <p className="text-gray-600">
-              Organize tasks with priorities, due dates, and custom tags.
-              Keep everything in perfect order.
-            </p>
-          </div>
 
-          <div className="text-center p-8 bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Calendar className="w-8 h-8 text-green-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Never Miss a Deadline</h3>
-            <p className="text-gray-600">
-              Set due dates and get reminders. Track your progress
-              and stay on top of your commitments.
-            </p>
-          </div>
-
-          <div className="text-center p-8 bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Users className="w-8 h-8 text-purple-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Team Collaboration</h3>
-            <p className="text-gray-600">
-              Work together efficiently. Share tasks and
-              collaborate with your team in real-time.
-            </p>
-          </div>
-        </div>
-
-        {/* Stats Section */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600 mb-2">10K+</div>
-            <div className="text-gray-600">Active Users</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-green-600 mb-2">50K+</div>
-            <div className="text-gray-600">Tasks Completed</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-purple-600 mb-2">99.9%</div>
-            <div className="text-gray-600">Uptime</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-orange-600 mb-2">24/7</div>
-            <div className="text-gray-600">Support</div>
-          </div>
-        </div>
-
-        {/* Benefits Section */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-16">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-8">Why Choose Todo Evolution?</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-blue-600" />
+            <div className="mockup-progress">
+              <div className="prog-label">
+                <span>Daily progress</span>
+                <span>7 of 12 done</span>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Real-time Updates</h3>
-                <p className="text-gray-600">See changes instantly across all devices with automatic synchronization.</p>
+              <div className="prog-track">
+                <div className="prog-fill"></div>
               </div>
             </div>
 
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <CheckCircle2 className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Mobile First</h3>
-                <p className="text-gray-600">Full functionality on your phone or tablet. Manage tasks anywhere, anytime.</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Team Features</h3>
-                <p className="text-gray-600">Collaborate seamlessly with your team on shared projects and tasks.</p>
+            <div className="mockup-input-wrap">
+              <div className="mockup-input">
+                <svg className="input-icon" viewBox="0 0 24 24">
+                  <path d="M12 20h9"></path>
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                </svg>
+                <TypingText />
+                <div className="cursor"></div>
               </div>
             </div>
 
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-orange-600" />
+            <div className="task-list">
+              <div className="task-row">
+                <div className="task-cb"></div>
+                <span className="task-label">Review product roadmap with team</span>
+                <span className="ai-tag tag-high">High</span>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Smart Analytics</h3>
-                <p className="text-gray-600">Track your productivity with detailed insights and reports.</p>
+              <div className="task-row">
+                <div className="task-cb"></div>
+                <span className="task-label">Prepare slides for investor call</span>
+                <span className="ai-tag tag-high">High</span>
+              </div>
+              <div className="task-row">
+                <div className="task-cb"></div>
+                <span className="task-label">Schedule dentist appointment</span>
+                <span className="ai-tag tag-med">Medium</span>
+              </div>
+              <div className="task-row">
+                <div className="task-cb done"></div>
+                <span className="task-label done">Send invoice to client</span>
+                <span className="ai-tag tag-done">Done</span>
+              </div>
+            </div>
+
+            <div className="ai-suggest">
+              <div className="ai-suggest-hd">
+                <div className="ai-dot"></div>
+                AI Insight
+              </div>
+              <div className="ai-suggest-text">
+                Investor call is in 3 hours. I&apos;ve moved slide prep to the top and cleared your afternoon for prep time.
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* CTA Section */}
-        <div className="text-center bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-12 text-white">
-          <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
-          <p className="text-xl mb-8 opacity-90">
-            Join thousands of users who are already more productive with Todo Evolution.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/dashboard"
-              className="bg-white text-blue-600 hover:bg-gray-50 px-8 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center"
-            >
-              Start Free Trial
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Link>
-            <Link
-              href="/auth/signup"
-              className="border border-white text-white hover:bg-white hover:text-blue-600 px-8 py-3 rounded-lg font-semibold transition-colors"
-            >
-              Create Free Account
-            </Link>
+      {/* TRUST BAR */}
+      <div className="trust-bar">
+        <div className="trust-inner">
+          <span className="trust-txt">Trusted by teams at</span>
+          <div className="trust-div"></div>
+          <div className="trust-logos">
+            <span className="trust-logo">Veritas</span>
+            <span className="trust-logo">Meridian</span>
+            <span className="trust-logo">Crestwood</span>
+            <span className="trust-logo">Arcana</span>
+            <span className="trust-logo">Solstice</span>
           </div>
         </div>
-      </main>
+      </div>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-200 bg-white/80 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center text-gray-500">
-            <p>&copy; 2024 Todo Evolution. All rights reserved.</p>
+      {/* FEATURES */}
+      <section id="features">
+        <div className="section">
+          <FadeUp className="s-head">
+            <div className="s-eyebrow">Features</div>
+            <h2 className="s-h2">Built for how you <em>actually</em> work</h2>
+            <p className="s-sub">No rigid systems. No complex setup. Taska learns your rhythms and gets sharper every day.</p>
+          </FadeUp>
+
+          <div className="feat-grid">
+            <FadeUp delay={0.08}>
+              <div className="feat-card">
+                <div className="feat-ico">
+                  <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <h3 className="feat-h3">Natural Language</h3>
+                <p className="feat-p">Type like you think. &ldquo;Call mom Sunday evening&rdquo; becomes a structured, scheduled task — no formatting required.</p>
+              </div>
+            </FadeUp>
+
+            <FadeUp delay={0.17}>
+              <div className="feat-card">
+                <div className="feat-ico">
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                </div>
+                <h3 className="feat-h3">Smart Prioritization</h3>
+                <p className="feat-p">AI reads your deadlines, energy patterns, and dependencies to surface exactly what needs your attention right now.</p>
+              </div>
+            </FadeUp>
+
+            <FadeUp delay={0.26}>
+              <div className="feat-card">
+                <div className="feat-ico">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </div>
+                <h3 className="feat-h3">Time Intelligence</h3>
+                <p className="feat-p">Understands context — meetings, habits, soft deadlines — and proactively reshuffles your day when things change.</p>
+              </div>
+            </FadeUp>
+
+            <FadeUp delay={0.35}>
+              <div className="feat-card">
+                <div className="feat-ico">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="8"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line></svg>
+                </div>
+                <h3 className="feat-h3">Deep Focus Mode</h3>
+                <p className="feat-p">One task. Full screen. Zero noise. Taska hides everything but what deserves your full attention in this moment.</p>
+              </div>
+            </FadeUp>
+
+            <FadeUp delay={0.44}>
+              <div className="feat-card">
+                <div className="feat-ico">
+                  <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                </div>
+                <h3 className="feat-h3">Weekly Review</h3>
+                <p className="feat-p">Every Sunday, a personal digest of wins, slips, and a curated plan for the week ahead — written just for you.</p>
+              </div>
+            </FadeUp>
+
+            <FadeUp delay={0.53}>
+              <div className="feat-card">
+                <div className="feat-ico">
+                  <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </div>
+                <h3 className="feat-h3">Team Collaboration</h3>
+                <p className="feat-p">Share lists, delegate tasks, and track team progress at a glance. AI balances workloads so no one burns out.</p>
+              </div>
+            </FadeUp>
           </div>
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <div className="section-alt" id="how">
+        <div className="section">
+          <FadeUp className="s-head">
+            <div className="s-eyebrow">How it works</div>
+            <h2 className="s-h2">Three steps to clarity</h2>
+            <p className="s-sub">From brain dump to done list — Taska removes all friction in between.</p>
+          </FadeUp>
+
+          <div className="steps">
+            <FadeUp delay={0.08}>
+              <div className="step active">
+                <div className="step-num">1</div>
+                <h3 className="step-h3">Brain dump it all</h3>
+                <p className="step-p">Add everything cluttering your mind in seconds. No structure, no formatting — just talk to Taska like a trusted colleague.</p>
+              </div>
+            </FadeUp>
+
+            <FadeUp delay={0.17}>
+              <div className="step">
+                <div className="step-num">2</div>
+                <h3 className="step-h3">AI organizes it</h3>
+                <p className="step-p">Taska categorizes, prioritizes, and schedules — learning your rhythms over time so its suggestions get sharper every week.</p>
+              </div>
+            </FadeUp>
+
+            <FadeUp delay={0.26}>
+              <div className="step">
+                <div className="step-num">3</div>
+                <h3 className="step-h3">Focus and execute</h3>
+                <p className="step-p">Follow the AI-curated daily plan, check things off, and watch your output compound week after week after week.</p>
+              </div>
+            </FadeUp>
+          </div>
+        </div>
+      </div>
+
+      {/* TESTIMONIALS */}
+      <section id="testimonials">
+        <div className="section">
+          <FadeUp className="s-head">
+            <div className="s-eyebrow">Testimonials</div>
+            <h2 className="s-h2">People who use Taska <em>love</em> it</h2>
+          </FadeUp>
+
+          <div className="testi-grid">
+            <FadeUp delay={0.08}>
+              <div className="testi-card">
+                <div className="testi-stars">
+                  {[...Array(5)].map((_, i) => <div key={i} className="star"></div>)}
+                </div>
+                <p className="testi-quote">I&apos;ve tried every todo app. Taska is the first one that actually reduced my anxiety. The AI prioritization is scarily good — it knows what matters before I do.</p>
+                <div className="testi-author">
+                  <div className="testi-av">S</div>
+                  <div>
+                    <div className="testi-name">Sarah K.</div>
+                    <div className="testi-role">Product Lead, Veritas</div>
+                  </div>
+                </div>
+              </div>
+            </FadeUp>
+
+            <FadeUp delay={0.17}>
+              <div className="testi-card">
+                <div className="testi-stars">
+                  {[...Array(5)].map((_, i) => <div key={i} className="star"></div>)}
+                </div>
+                <p className="testi-quote">The natural language input changed everything. I say &lsquo;prep for Monday&apos;s board meeting&rsquo; and Taska breaks it into actual steps with deadlines. Wild.</p>
+                <div className="testi-author">
+                  <div className="testi-av">M</div>
+                  <div>
+                    <div className="testi-name">Marcus T.</div>
+                    <div className="testi-role">Founder, Meridian Labs</div>
+                  </div>
+                </div>
+              </div>
+            </FadeUp>
+
+            <FadeUp delay={0.26}>
+              <div className="testi-card">
+                <div className="testi-stars">
+                  {[...Array(5)].map((_, i) => <div key={i} className="star"></div>)}
+                </div>
+                <p className="testi-quote">We rolled Taska out to our whole engineering team. Within a week, everyone was hitting their deadlines. The AI insight cards are like having a PM in your pocket.</p>
+                <div className="testi-author">
+                  <div className="testi-av">L</div>
+                  <div>
+                    <div className="testi-name">Lena M.</div>
+                    <div className="testi-role">Engineering Manager, Crestwood</div>
+                  </div>
+                </div>
+              </div>
+            </FadeUp>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <div className="cta-wrap">
+        <div className="cta-inner">
+          <div className="cta-orb"></div>
+          <div className="cta-left">
+            <div className="cta-label">{isAuthenticated ? 'Welcome back' : 'Get started today'}</div>
+            <h2 className="cta-h2">Your most productive year starts now</h2>
+            <p className="cta-sub">Free forever plan. No card required. Live in 60 seconds.</p>
+          </div>
+          <div className="cta-right">
+            {isAuthenticated ? (
+              <Link className="btn btn-white" href="/dashboard">Go to Dashboard →</Link>
+            ) : (
+              <>
+                <Link className="btn btn-white" href="/auth/signup">Start for free →</Link>
+                <span className="cta-fine">Or <Link href="#" className="cta-demo-link">book a demo</Link></span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* FOOTER */}
+      <footer className="landing-footer">
+        <div className="footer-inner">
+          <Link className="footer-logo" href="#">Taska<span>.</span></Link>
+          <ul className="footer-links">
+            <li><a href="#">Privacy</a></li>
+            <li><a href="#">Terms</a></li>
+            <li><a href="#">Blog</a></li>
+            <li><a href="#">Changelog</a></li>
+            <li><a href="#">Contact</a></li>
+          </ul>
+          <span className="footer-copy">© 2026 Taska, Inc.</span>
         </div>
       </footer>
     </div>

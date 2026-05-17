@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+venv/
 __pycache__/
 *.pyc
 *.pyo
@@ -18,6 +19,7 @@ build/
 backend/.env
 frontend/.env.local
 mcp_server/.env
+agent/.env
 
 # IDE
 .vscode/
