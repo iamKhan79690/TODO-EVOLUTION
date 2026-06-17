@@ -5,8 +5,8 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
-  eslint: {
-    ignoreDuringBuilds: true,
+  turbopack: {
+    root: "D:/code/Personal Projects/TODO-EVOLUTION",
   },
 
   poweredByHeader: false,

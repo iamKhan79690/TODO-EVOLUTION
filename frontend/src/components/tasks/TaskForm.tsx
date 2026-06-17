@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Task, TaskPriority, CreateTaskDTO, UpdateTaskDTO } from '@/lib/types';
+import { Task, CreateTaskDTO, UpdateTaskDTO } from '@/lib/types';
 import { format } from 'date-fns';
 import {
   Plus,
@@ -22,7 +22,10 @@ const taskSchema = z.object({
   dueDate: z.string().optional(),
   tags: z.array(z.string()).optional(),
   assignedTo: z.string().optional(),
-  estimatedTime: z.number().min(0, 'Estimated time must be positive').optional(),
+  estimatedTime: z.preprocess(
+    (value) => (Number.isNaN(value) ? undefined : value),
+    z.number().min(0, 'Estimated time must be positive').optional()
+  ),
 });
 
 type TaskFormData = z.infer<typeof taskSchema>;
@@ -46,17 +49,23 @@ export default function TaskForm({
   mode = 'create'
 }: TaskFormProps) {
   const [newTag, setNewTag] = useState('');
-  const [tags, setTags] = useState<string[]>(task?.tags || []);
+  const initialTags = useMemo(() => task?.tags || [], [task?.tags]);
+  const taskKey = `${task?.id || 'create'}:${initialTags.join('|')}`;
+  const [tagState, setTagState] = useState({ taskKey, tags: initialTags });
+
+  if (tagState.taskKey !== taskKey) {
+    setTagState({ taskKey, tags: initialTags });
+  }
+
+  const tags = tagState.tags;
 
   const {
     register,
     handleSubmit,
     formState: { errors, isDirty },
-    setValue,
-    watch,
     reset,
   } = useForm<TaskFormData>({
-    resolver: zodResolver(taskSchema as any),
+    resolver: zodResolver(taskSchema),
     defaultValues: {
       title: task?.title || '',
       description: task?.description || '',
@@ -80,7 +89,6 @@ export default function TaskForm({
         assignedTo: task.assignedTo || '',
         estimatedTime: task.estimatedTime || undefined,
       });
-      setTags(task.tags || []);
     }
   }, [task, reset]);
 
@@ -96,7 +104,7 @@ export default function TaskForm({
       await onSubmit(submitData);
       if (mode === 'create') {
         reset(); // Reset form only for create mode
-        setTags([]);
+        setTagState({ taskKey, tags: [] });
         setNewTag('');
       }
     } catch (error) {
@@ -106,13 +114,19 @@ export default function TaskForm({
 
   const addTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags([...tags, newTag.trim()]);
+      setTagState((current) => ({
+        ...current,
+        tags: [...current.tags, newTag.trim()],
+      }));
       setNewTag('');
     }
   };
 
   const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
+    setTagState((current) => ({
+      ...current,
+      tags: current.tags.filter(tag => tag !== tagToRemove),
+    }));
   };
 
   const handleTagKeyPress = (e: React.KeyboardEvent) => {
@@ -122,8 +136,11 @@ export default function TaskForm({
     }
   };
 
-  const selectedPriority = watch('priority');
-  const hasChanges = isDirty || tags.length !== (task?.tags?.length || 0);
+  const originalTags = task?.tags || [];
+  const hasTagChanges =
+    tags.length !== originalTags.length ||
+    tags.some((tag, index) => tag !== originalTags[index]);
+  const hasChanges = isDirty || hasTagChanges;
 
   return (
     <div className="bg-white rounded-lg shadow-lg border border-gray-200">
@@ -248,7 +265,7 @@ export default function TaskForm({
                 type="text"
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
-                onKeyPress={handleTagKeyPress}
+                onKeyDown={handleTagKeyPress}
                 placeholder="Add a tag..."
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
